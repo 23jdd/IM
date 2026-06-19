@@ -15,5 +15,5 @@ func ConfigInit(dataSource string) {
 		Replicas:   nil,
 		Policy:     "",
 	})
-	userModel = model.NewUserModel(conn)
+	UserModel = model.NewUserModel(conn)
 }
