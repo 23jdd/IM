@@ -8,8 +8,10 @@ import (
 )
 
 type Client struct {
+	uid     uint32 //  user id
 	con     net.Conn
-	context any
+	context any // set expire timer
+	t       time.Duration
 }
 
 func NewClient(con net.Conn) *Client {
@@ -19,7 +21,8 @@ func NewClient(con net.Conn) *Client {
 }
 
 func (c *Client) HeartBeat() {
-	ticker := time.NewTicker(2 * time.Second)
+	ticker := time.NewTicker(c.t)
+	//
 	for {
 		s := <-ticker.C
 		fmt.Println(s.String())
