@@ -22,7 +22,9 @@ type Server struct {
 	bufPool        *TieredPool
 	workerPool     *ants.Pool
 	clientHandlers []Handler
-	clients        sync.Map // key uid  value client
+	clients        sync.Map
+	listener       net.Listener
+	quit           chan struct{}
 }
 
 func NewServer(address string, port int, t time.Duration) *Server {
@@ -36,6 +38,7 @@ func NewServer(address string, port int, t time.Duration) *Server {
 		bufPool:    NewTieredPool(8, 64, 256, 1024, 1024*4, 1024*16, 1024*64),
 		t:          t,
 		workerPool: wp,
+		quit:       make(chan struct{}),
 	}
 }
 
@@ -44,12 +47,19 @@ func (s *Server) Start() {
 	if err != nil {
 		panic(err)
 	}
+	s.listener = listen
+
 	for {
 		con, err := listen.Accept()
 		if err != nil {
-			continue
+			select {
+			case <-s.quit:
+				return
+			default:
+				continue
+			}
 		}
-		log.Println(con.RemoteAddr().String())
+		log.Println("new connection:", con.RemoteAddr().String())
 		s.count.Add(1)
 		err = s.workerPool.Submit(func() {
 			NewClient(con, s).Start()
@@ -67,17 +77,31 @@ func (s *Server) GetConnectCount() int32 {
 }
 
 func (s *Server) ShutDown() {
+	log.Println("server shutting down...")
+	close(s.quit)
+
+	if s.listener != nil {
+		s.listener.Close()
+	}
+
+	s.clients.Range(func(key, value any) bool {
+		if c, ok := value.(*Client); ok {
+			c.Close()
+		}
+		return true
+	})
+
 	s.workerPool.Release()
-
-}
-func Notify() {
-	// 创建接收信号的 channel
-	sigCh := make(chan os.Signal, 1)
-	// 监听 SIGINT 和 SIGTERM
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-
+	log.Println("server stopped")
 }
 
 func (s *Server) AddHandler(h Handler) {
 	s.clientHandlers = append(s.clientHandlers, h)
+}
+
+func NotifyServer(s *Server) {
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	<-sigCh
+	s.ShutDown()
 }
