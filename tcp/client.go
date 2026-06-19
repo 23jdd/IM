@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+type Handler func()
 type Client struct {
 	uid     uint32 //  user id
 	con     net.Conn
