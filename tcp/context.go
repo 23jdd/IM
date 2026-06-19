@@ -14,3 +14,6 @@ func (c *Context) Get(key string) (any, bool) {
 	val, ok := c.store[key]
 	return val, ok
 }
+func (c *Context) Del(key string) {
+	delete(c.store, key)
+}

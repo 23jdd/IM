@@ -12,20 +12,22 @@ import (
 )
 
 type Client struct {
-	uid     uint32 //  user id
-	con     net.Conn
-	context any
-	server  *Server
-	closed  bool
-	worker  chan *Message.Message
+	uid      string
+	con      net.Conn
+	context  *Context
+	server   *Server
+	closed   bool
+	worker   chan *Message.Message
+	finished bool
 }
 
 const WorkerSize int = 200 //
 func NewClient(con net.Conn, server *Server) *Client {
 	return &Client{
-		con:    con,
-		server: server,
-		worker: make(chan *Message.Message, WorkerSize),
+		con:     con,
+		server:  server,
+		worker:  make(chan *Message.Message, WorkerSize),
+		context: NewContext(),
 	}
 }
 
@@ -64,7 +66,11 @@ func (c *Client) MessageHandler() {
 		}
 		for _, h := range c.server.clientHandlers {
 			h(message, c)
+			if c.finished {
+				break
+			}
 		}
+		c.finished = false
 	}
 }
 
@@ -72,10 +78,7 @@ func (c *Client) Process(m *Message.Message) {
 	c.worker <- m
 }
 
-func (c *Client) SetContext(ctx any) {
-	c.context = ctx
-}
-func (c *Client) Context() any {
+func (c *Client) Context() *Context {
 	return c.context
 }
 func (c *Client) OnTicker() {
@@ -170,4 +173,9 @@ func (c *Client) ReadMessage() (*Message.Message, error) {
 		return nil, err
 	}
 	return message, nil
+}
+func (c *Client) SetClose(err error) {
+	if errors.Is(err, io.EOF) {
+		c.closed = true
+	}
 }

@@ -326,22 +326,25 @@ func TestClientContext(t *testing.T) {
 
 	client := tcp.NewClient(serverConn, newTestServer())
 
-	client.SetContext("test_value")
-	ctx := client.Context()
-	if ctx.(string) != "test_value" {
-		t.Errorf("context = %v, want 'test_value'", ctx)
+	client.Context().Set("uid", "12345")
+	val, ok := client.Context().Get("uid")
+	if !ok {
+		t.Fatal("expected key 'uid' to exist")
+	}
+	if val.(string) != "12345" {
+		t.Errorf("context val = %v, want '12345'", val)
 	}
 }
 
-func TestClientContextNil(t *testing.T) {
+func TestClientContextMissingKey(t *testing.T) {
 	_, serverConn := net.Pipe()
 	defer serverConn.Close()
 
 	client := tcp.NewClient(serverConn, newTestServer())
 
-	ctx := client.Context()
-	if ctx != nil {
-		t.Errorf("expected nil initial context, got %v", ctx)
+	_, ok := client.Context().Get("nonexistent")
+	if ok {
+		t.Error("expected key 'nonexistent' to not exist")
 	}
 }
 

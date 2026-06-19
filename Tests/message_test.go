@@ -288,31 +288,43 @@ func TestAllMessageTypesRoundtrip(t *testing.T) {
 func TestHeaderByteValues(t *testing.T) {
 	m := Message.NewMessage(Message.ACK, 0, nil)
 	enc := Message.Encode(m)
-	if enc[0] != 0 {
-		t.Errorf("ACK header byte = %d, want 0", enc[0])
+	if enc[0] != Message.ACK {
+		t.Errorf("ACK header byte = %d, want %d", enc[0], Message.ACK)
+	}
+
+	m = Message.NewMessage(Message.Nack, 0, nil)
+	enc = Message.Encode(m)
+	if enc[0] != Message.Nack {
+		t.Errorf("Nack header byte = %d, want %d", enc[0], Message.Nack)
+	}
+
+	m = Message.NewMessage(Message.Auth, 0, nil)
+	enc = Message.Encode(m)
+	if enc[0] != Message.Auth {
+		t.Errorf("Auth header byte = %d, want %d", enc[0], Message.Auth)
 	}
 
 	m = Message.NewMessage(Message.HeartBeat, 0, nil)
 	enc = Message.Encode(m)
-	if enc[0] != 1 {
-		t.Errorf("HeartBeat header byte = %d, want 1", enc[0])
+	if enc[0] != Message.HeartBeat {
+		t.Errorf("HeartBeat header byte = %d, want %d", enc[0], Message.HeartBeat)
 	}
 
 	m = Message.NewMessage(Message.Json, 0, nil)
 	enc = Message.Encode(m)
-	if enc[0] != 2 {
-		t.Errorf("Json header byte = %d, want 2", enc[0])
+	if enc[0] != Message.Json {
+		t.Errorf("Json header byte = %d, want %d", enc[0], Message.Json)
 	}
 
 	m = Message.NewMessage(Message.Text, 0, nil)
 	enc = Message.Encode(m)
-	if enc[0] != 3 {
-		t.Errorf("Text header byte = %d, want 3", enc[0])
+	if enc[0] != Message.Text {
+		t.Errorf("Text header byte = %d, want %d", enc[0], Message.Text)
 	}
 
 	m = Message.NewMessage(Message.Blob, 0, nil)
 	enc = Message.Encode(m)
-	if enc[0] != 4 {
-		t.Errorf("Blob header byte = %d, want 4", enc[0])
+	if enc[0] != Message.Blob {
+		t.Errorf("Blob header byte = %d, want %d", enc[0], Message.Blob)
 	}
 }
