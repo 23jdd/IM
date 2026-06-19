@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync"
 	"time"
 )
 
@@ -21,65 +22,66 @@ type Client struct {
 	heart    chan any
 	finished bool
 	key      uint32
+	writeMu  sync.Mutex
+	closeOnce sync.Once
 }
 
-const WorkerSize int = 200 //
+const WorkerSize int = 200
+
 func NewClient(con net.Conn, server *Server) *Client {
 	return &Client{
 		con:     con,
 		server:  server,
 		worker:  make(chan *Message.Message, WorkerSize),
 		context: NewContext(),
-		heart:   make(chan any),
+		heart:   make(chan any, 1),
 	}
 }
 
 func (c *Client) HeartBeat() {
 	ticker := time.NewTicker(c.server.t)
-	//
+	defer ticker.Stop()
 	for !c.closed {
-		s := <-ticker.C
-		fmt.Println(s.String())
-		c.OnTicker()
+		select {
+		case s := <-ticker.C:
+			fmt.Println(s.String())
+			c.OnTicker()
+		}
 	}
 }
 
 func (c *Client) Start() {
-	err := c.server.workerPool.Submit(c.HeartBeat)
-	if err != nil {
-		log.Println("submit heartbeat failed:", err)
-		return
-	}
-	err = c.server.workerPool.Submit(c.MessageHandler)
-	if err != nil {
-		log.Println("submit message handler failed:", err)
-		return
-	}
+	go c.HeartBeat()
+	go c.MessageHandler()
+
 	defer c.Close()
-	for !c.closed {
+	for {
 		message, err := c.ReadMessage()
 		if err != nil {
-			if errors.Is(err, io.EOF) {
+			if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
 				close(c.worker)
 				return
-			} else {
-				log.Println(err)
-				continue
 			}
+			c.closed = true
+			close(c.worker)
+			return
 		}
 		c.worker <- message
 	}
 }
+
 func (c *Client) MessageHandler() {
-	for !c.closed {
+	for {
 		select {
 		case _, ok := <-c.heart:
 			if !ok {
 				return
 			}
 			c.IncrKey()
-			err := c.SendHeart(c.key)
-			c.SetClose(err)
+			if err := c.SendHeart(c.key); err != nil {
+				c.closed = true
+				return
+			}
 		case message, ok := <-c.worker:
 			if !ok {
 				return
@@ -92,9 +94,9 @@ func (c *Client) MessageHandler() {
 			}
 			c.finished = false
 		}
-
 	}
 }
+
 func (c *Client) Process(m *Message.Message) {
 	c.worker <- m
 }
@@ -102,80 +104,72 @@ func (c *Client) Process(m *Message.Message) {
 func (c *Client) Context() *Context {
 	return c.context
 }
+
 func (c *Client) OnTicker() {
-	c.heart <- nil
-}
-func (c *Client) Close() {
-	err := c.con.Close()
-	if err != nil {
-		log.Println(err)
+	select {
+	case c.heart <- nil:
+	default:
 	}
-	c.server.count.Add(-1)
-	c.server.clients.Delete(c.uid)
 }
+
+func (c *Client) Close() {
+	c.closeOnce.Do(func() {
+		c.closed = true
+		if c.uid != "" {
+			c.server.clients.Delete(c.uid)
+		}
+		c.server.count.Add(-1)
+		if err := c.con.Close(); err != nil {
+			log.Println("close conn:", err)
+		}
+	})
+}
+
 func (c *Client) Send(message *Message.Message) error {
+	c.writeMu.Lock()
+	defer c.writeMu.Unlock()
 	_, err := c.con.Write(Message.Encode(message))
 	return err
 }
+
 func (c *Client) SendJson(key uint32, target any) error {
 	message, err := Message.JsonMessage(key, target)
 	if err != nil {
 		return err
 	}
-	err = c.Send(message)
-	if err != nil {
-		return err
-	}
-	return nil
+	return c.Send(message)
 }
+
 func (c *Client) SendHeart(key uint32) error {
 	message := Message.HeartMessage(key)
-	err := c.Send(message)
-	if err != nil {
-		return err
-	}
-	return nil
+	return c.Send(message)
 }
+
 func (c *Client) SendAck(key uint32) error {
 	message := Message.AckMessage(key)
-	err := c.Send(message)
-	if err != nil {
-		return err
-	}
-	return nil
+	return c.Send(message)
 }
+
 func (c *Client) SendText(key uint32, text string) error {
 	message := Message.TextMessage(key, text)
-	err := c.Send(message)
-	if err != nil {
-		return err
-	}
-	return nil
+	return c.Send(message)
 }
+
 func (c *Client) SendBlob(key uint32, blob []byte) error {
 	message := Message.BlobMessage(key, blob)
-	err := c.Send(message)
-	if err != nil {
-		return err
-	}
-	return nil
+	return c.Send(message)
 }
+
 func (c *Client) SendAuth(key uint32, token string) error {
 	message := Message.AuthMessage(key, token)
-	err := c.Send(message)
-	if err != nil {
-		return err
-	}
-	return nil
+	return c.Send(message)
 }
+
 func (c *Client) SendNack(key uint32) error {
 	message := Message.NackMessage(key)
-	err := c.Send(message)
-	if err != nil {
-		return err
-	}
-	return nil
+	return c.Send(message)
 }
+
 func (c *Client) ReadMessage() (*Message.Message, error) {
 	header := c.server.bufPool.Get(8)
 	_, err := io.ReadFull(c.con, header)
@@ -196,11 +190,6 @@ func (c *Client) ReadMessage() (*Message.Message, error) {
 		return nil, err
 	}
 	return message, nil
-}
-func (c *Client) SetClose(err error) {
-	if errors.Is(err, io.EOF) {
-		c.closed = true
-	}
 }
 
 func (c *Client) IncrKey() {

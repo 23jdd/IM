@@ -3,33 +3,44 @@ package tcp
 import (
 	"IM/tcp/Message"
 	"IM/utils"
+	"log"
 )
-
-const Finsh string = "Finsh"
 
 type Handler func(m *Message.Message, c *Client)
 
 func Echo(m *Message.Message, c *Client) {
-	err := c.SendBlob(0, m.Data)
-	if err != nil {
-		c.SetClose(err)
+	if err := c.SendBlob(m.GetKey(), m.Data); err != nil {
+		log.Println("echo send error:", err)
+		c.Close()
 	}
 }
+
 func Verify(m *Message.Message, c *Client) {
-	if m.GetMsgType() == Message.Auth {
-		c.finished = true
-		if c.uid == "" {
-			token := string(m.Data)
-			claim, err := utils.ParseToken(token)
-			if err != nil {
-				err := c.SendNack(m.GetKey())
-				c.SetClose(err)
-				return
-			}
-			c.uid = claim.Uid
-			c.server.clients.Store(c.uid, c)
-			err = c.SendAck(m.GetKey())
-			c.SetClose(err)
+	if m.GetMsgType() != Message.Auth {
+		return
+	}
+	c.finished = true
+
+	if c.uid != "" {
+		if err := c.SendNack(m.GetKey()); err != nil {
+			c.Close()
 		}
+		return
+	}
+
+	token := string(m.Data)
+	claim, err := utils.ParseToken(token)
+	if err != nil {
+		if err := c.SendNack(m.GetKey()); err != nil {
+			c.Close()
+		}
+		return
+	}
+
+	c.uid = claim.Uid
+	c.server.clients.Store(c.uid, c)
+	if err := c.SendAck(m.GetKey()); err != nil {
+		log.Println("verify ack send error:", err)
+		c.Close()
 	}
 }

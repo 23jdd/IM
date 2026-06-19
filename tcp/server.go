@@ -11,6 +11,8 @@ import (
 	"syscall"
 	"time"
 
+	"IM/tcp/Message"
+
 	"github.com/panjf2000/ants/v2"
 )
 
@@ -97,6 +99,18 @@ func (s *Server) ShutDown() {
 
 func (s *Server) AddHandler(h Handler) {
 	s.clientHandlers = append(s.clientHandlers, h)
+}
+
+func (s *Server) RouteTo(uid string, m *Message.Message) error {
+	val, ok := s.clients.Load(uid)
+	if !ok {
+		return fmt.Errorf("client %s not online", uid)
+	}
+	c, ok := val.(*Client)
+	if !ok {
+		return fmt.Errorf("invalid client type for %s", uid)
+	}
+	return c.Send(m)
 }
 
 func NotifyServer(s *Server) {
