@@ -18,7 +18,9 @@ type Client struct {
 	server   *Server
 	closed   bool
 	worker   chan *Message.Message
+	heart    chan any
 	finished bool
+	key      uint32
 }
 
 const WorkerSize int = 200 //
@@ -28,6 +30,7 @@ func NewClient(con net.Conn, server *Server) *Client {
 		server:  server,
 		worker:  make(chan *Message.Message, WorkerSize),
 		context: NewContext(),
+		heart:   make(chan any),
 	}
 }
 
@@ -69,20 +72,29 @@ func (c *Client) Start() {
 }
 func (c *Client) MessageHandler() {
 	for !c.closed {
-		message, ok := <-c.worker
-		if !ok {
-			return
-		}
-		for _, h := range c.server.clientHandlers {
-			h(message, c)
-			if c.finished {
-				break
+		select {
+		case _, ok := <-c.heart:
+			if !ok {
+				return
 			}
+			c.IncrKey()
+			err := c.SendHeart(c.key)
+			c.SetClose(err)
+		case message, ok := <-c.worker:
+			if !ok {
+				return
+			}
+			for _, h := range c.server.clientHandlers {
+				h(message, c)
+				if c.finished {
+					break
+				}
+			}
+			c.finished = false
 		}
-		c.finished = false
+
 	}
 }
-
 func (c *Client) Process(m *Message.Message) {
 	c.worker <- m
 }
@@ -91,7 +103,7 @@ func (c *Client) Context() *Context {
 	return c.context
 }
 func (c *Client) OnTicker() {
-	fmt.Println("OnTicker")
+	c.heart <- nil
 }
 func (c *Client) Close() {
 	err := c.con.Close()
@@ -99,6 +111,7 @@ func (c *Client) Close() {
 		log.Println(err)
 	}
 	c.server.count.Add(-1)
+	c.server.clients.Delete(c.uid)
 }
 func (c *Client) Send(message *Message.Message) error {
 	_, err := c.con.Write(Message.Encode(message))
@@ -188,4 +201,8 @@ func (c *Client) SetClose(err error) {
 	if errors.Is(err, io.EOF) {
 		c.closed = true
 	}
+}
+
+func (c *Client) IncrKey() {
+	c.key++
 }

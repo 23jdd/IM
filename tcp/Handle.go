@@ -27,6 +27,7 @@ func Verify(m *Message.Message, c *Client) {
 				return
 			}
 			c.uid = claim.Uid
+			c.server.clients.Store(c.uid, c)
 			err = c.SendAck(m.GetKey())
 			c.SetClose(err)
 		}

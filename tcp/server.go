@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"sync"
 	"sync/atomic"
 	"syscall"
 	"time"
@@ -21,6 +22,7 @@ type Server struct {
 	bufPool        *TieredPool
 	workerPool     *ants.Pool
 	clientHandlers []Handler
+	clients        sync.Map // key uid  value client
 }
 
 func NewServer(address string, port int, t time.Duration) *Server {
