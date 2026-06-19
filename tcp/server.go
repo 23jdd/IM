@@ -22,9 +22,10 @@ func (s *Server) Start() {
 		panic(err)
 	}
 	for {
-		_, err := listen.Accept()
+		con, err := listen.Accept()
 		if err != nil {
 			continue
 		}
+		go NewClient(con).Start()
 	}
 }
