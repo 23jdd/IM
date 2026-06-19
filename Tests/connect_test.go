@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"io"
+	"log"
 	"net"
 	"testing"
 	"time"
@@ -67,7 +68,8 @@ func TestConnectEcho(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Decode failed: %v", err)
 	}
-
+	log.Println(received.Len())
+	log.Println(string(received.Data))
 	if !bytes.Equal(received.Data, sendData) {
 		t.Errorf("echoed data = %v, want %v", received.Data, sendData)
 	}

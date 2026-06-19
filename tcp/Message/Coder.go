@@ -40,6 +40,7 @@ func Decode(data []byte) (*Message, error) {
 	}
 	m.Data = make([]byte, bodyLen)
 	copy(m.Data, data[8:8+bodyLen])
+	m.len = bodyLen
 	return &m, nil
 }
 
