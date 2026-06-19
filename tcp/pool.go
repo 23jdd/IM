@@ -9,10 +9,10 @@ type TieredPool struct {
 	pools []sync.Pool
 }
 
-// New creates a new TieredPool with the given capacities.
+// NewTieredPool New creates a new TieredPool with the given capacities.
 // Each capacity defines a pool of buffers with that exact capacity.
 // The capacities slice must be sorted in ascending order.
-func New(capacities []int) *TieredPool {
+func NewTieredPool(capacities ...int) *TieredPool {
 	if len(capacities) == 0 {
 		panic("tiered buffer: capacities must not be empty")
 	}

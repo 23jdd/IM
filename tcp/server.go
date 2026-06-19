@@ -9,16 +9,19 @@ import (
 )
 
 type Server struct {
-	address string
-	port    int
-	count   atomic.Int32
-	t       time.Duration
+	address        string
+	port           int
+	count          atomic.Int32
+	t              time.Duration
+	pool           *TieredPool
+	clientHandlers []Handler
 }
 
 func NewServer(address string, port int) *Server {
 	return &Server{
 		address: address,
 		port:    port,
+		pool:    NewTieredPool(64, 256, 1024, 1024*4, 1024*16, 1024*64),
 	}
 }
 func (s *Server) Start() {
@@ -43,4 +46,9 @@ func (s *Server) GetConnectCount() int32 {
 
 func (s *Server) ShutDown() {
 
+}
+
+// AddHandler
+func (s *Server) AddHandler(h Handler) {
+	s.clientHandlers = append(s.clientHandlers, h)
 }

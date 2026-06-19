@@ -3,19 +3,18 @@ package tcp
 import (
 	"IM/tcp/Message"
 	"fmt"
-	"io"
 	"log"
 	"net"
 	"time"
 )
 
-type Handler func()
 type Client struct {
 	uid     uint32 //  user id
 	con     net.Conn
 	context any // set expire timer
 	server  *Server
 	closed  bool
+	worker  chan *Message.Message
 }
 
 func NewClient(con net.Conn) *Client {
@@ -33,10 +32,21 @@ func (c *Client) HeartBeat() {
 		c.OnTicker()
 	}
 }
+
 func (c *Client) Start() {
 	go c.HeartBeat()
+	go c.MessageHandler()
 	for {
-		c.ReadMessage()
+		message := c.ReadMessage()
+		c.worker <- message
+	}
+}
+func (c *Client) MessageHandler() {
+	for {
+		message := <-c.worker
+		for _, h := range c.server.clientHandlers {
+			h(message, c)
+		}
 	}
 }
 func (c *Client) SetContext(ctx any) {
@@ -103,12 +113,14 @@ func (c *Client) SendBlob(key uint32, blob []byte) error {
 }
 func (c *Client) ReadMessage() *Message.Message {
 	// read solve message
-
+	data, err := c.ReadAll()
 	if err != nil {
 		return nil
 	}
+	size, ok := Message.FullPacketSize(data)
+
 	return nil
 }
-func (c *Client) ReadAll() {
+func (c *Client) ReadAll() ([]byte, error) {
 
 }
