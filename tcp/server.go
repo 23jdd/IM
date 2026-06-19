@@ -38,7 +38,7 @@ func (s *Server) Start() {
 		log.Println(con.RemoteAddr().String())
 		//TODO use ants
 		s.count.Add(1)
-		go NewClient(con).Start()
+		go NewClient(con, s).Start()
 	}
 }
 func (s *Server) GetConnectCount() int32 {

@@ -9,7 +9,12 @@ import (
 	"net"
 	"sync"
 	"testing"
+	"time"
 )
+
+func newTestServer() *tcp.Server {
+	return tcp.NewServer("", 0, 10*time.Second)
+}
 
 func readFullMessage(conn net.Conn) (*Message.Message, error) {
 	header := make([]byte, 8)
@@ -32,7 +37,7 @@ func TestEchoHandler(t *testing.T) {
 	defer clientConn.Close()
 	defer serverConn.Close()
 
-	client := tcp.NewClient(serverConn)
+	client := tcp.NewClient(serverConn, newTestServer())
 
 	sendData := []byte("hello echo test")
 	msg := Message.NewMessage(Message.Text, 1, sendData)
@@ -76,7 +81,7 @@ func TestEchoHandlerEmptyData(t *testing.T) {
 	defer clientConn.Close()
 	defer serverConn.Close()
 
-	client := tcp.NewClient(serverConn)
+	client := tcp.NewClient(serverConn, newTestServer())
 
 	msg := Message.NewMessage(Message.ACK, 0, nil)
 	encoded := Message.Encode(msg)
@@ -116,7 +121,7 @@ func TestEchoHandlerBinaryData(t *testing.T) {
 	defer clientConn.Close()
 	defer serverConn.Close()
 
-	client := tcp.NewClient(serverConn)
+	client := tcp.NewClient(serverConn, newTestServer())
 
 	binaryData := []byte{0x00, 0xFF, 0xAB, 0xCD, 0x12, 0x34}
 	msg := Message.NewMessage(Message.Blob, 255, binaryData)
@@ -157,7 +162,7 @@ func TestEchoClientSendAndRead(t *testing.T) {
 	defer clientConn.Close()
 	defer serverConn.Close()
 
-	client := tcp.NewClient(serverConn)
+	client := tcp.NewClient(serverConn, newTestServer())
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -185,7 +190,7 @@ func TestEchoClientSendJson(t *testing.T) {
 	defer clientConn.Close()
 	defer serverConn.Close()
 
-	client := tcp.NewClient(serverConn)
+	client := tcp.NewClient(serverConn, newTestServer())
 
 	type testPayload struct {
 		Msg string `json:"msg"`
@@ -217,7 +222,7 @@ func TestEchoClientSendText(t *testing.T) {
 	defer clientConn.Close()
 	defer serverConn.Close()
 
-	client := tcp.NewClient(serverConn)
+	client := tcp.NewClient(serverConn, newTestServer())
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -245,7 +250,7 @@ func TestEchoClientSendBlob(t *testing.T) {
 	defer clientConn.Close()
 	defer serverConn.Close()
 
-	client := tcp.NewClient(serverConn)
+	client := tcp.NewClient(serverConn, newTestServer())
 
 	blob := []byte{0x01, 0x02, 0x03, 0x04}
 
@@ -275,7 +280,7 @@ func TestEchoClientSendAck(t *testing.T) {
 	defer clientConn.Close()
 	defer serverConn.Close()
 
-	client := tcp.NewClient(serverConn)
+	client := tcp.NewClient(serverConn, newTestServer())
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -303,7 +308,7 @@ func TestEchoClientSendHeart(t *testing.T) {
 	defer clientConn.Close()
 	defer serverConn.Close()
 
-	client := tcp.NewClient(serverConn)
+	client := tcp.NewClient(serverConn, newTestServer())
 
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -330,7 +335,7 @@ func TestClientContext(t *testing.T) {
 	_, serverConn := net.Pipe()
 	defer serverConn.Close()
 
-	client := tcp.NewClient(serverConn)
+	client := tcp.NewClient(serverConn, newTestServer())
 
 	client.SetContext("test_value")
 	ctx := client.Context()
@@ -343,7 +348,7 @@ func TestClientContextNil(t *testing.T) {
 	_, serverConn := net.Pipe()
 	defer serverConn.Close()
 
-	client := tcp.NewClient(serverConn)
+	client := tcp.NewClient(serverConn, newTestServer())
 
 	ctx := client.Context()
 	if ctx != nil {
@@ -356,7 +361,7 @@ func TestEchoClientMultipleMessages(t *testing.T) {
 	defer clientConn.Close()
 	defer serverConn.Close()
 
-	client := tcp.NewClient(serverConn)
+	client := tcp.NewClient(serverConn, newTestServer())
 
 	messages := []string{"one", "two", "three"}
 	for i, msg := range messages {
@@ -386,7 +391,7 @@ func TestNewClient(t *testing.T) {
 	_, serverConn := net.Pipe()
 	defer serverConn.Close()
 
-	client := tcp.NewClient(serverConn)
+	client := tcp.NewClient(serverConn, newTestServer())
 	if client == nil {
 		t.Fatal("NewClient returned nil")
 	}
@@ -397,7 +402,7 @@ func TestEchoHandlerUTF8(t *testing.T) {
 	defer clientConn.Close()
 	defer serverConn.Close()
 
-	client := tcp.NewClient(serverConn)
+	client := tcp.NewClient(serverConn, newTestServer())
 
 	utf8Data := []byte("你好，世界！🚀")
 	msg := Message.NewMessage(Message.Text, 1, utf8Data)

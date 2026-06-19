@@ -14,16 +14,17 @@ import (
 type Client struct {
 	uid     uint32 //  user id
 	con     net.Conn
-	context any // set expire timer
+	context any
 	server  *Server
 	closed  bool
 	worker  chan *Message.Message
 }
 
 const WorkerSize int = 200 //
-func NewClient(con net.Conn) *Client {
+func NewClient(con net.Conn, server *Server) *Client {
 	return &Client{
 		con:    con,
+		server: server,
 		worker: make(chan *Message.Message, WorkerSize),
 	}
 }
@@ -46,6 +47,7 @@ func (c *Client) Start() {
 		if err != nil {
 			if errors.Is(err, io.EOF) {
 				close(c.worker)
+				return
 			} else {
 				log.Println(err)
 				continue
