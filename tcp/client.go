@@ -48,3 +48,6 @@ func (c *Client) Close() {
 		log.Println(err)
 	}
 }
+func (c *Client) Send() {
+
+}
