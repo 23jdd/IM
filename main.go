@@ -13,10 +13,12 @@ func main() {
 	log.Println("config loaded:", config)
 
 	mysql.ConfigInit(config.DataSource)
+	mysql.InitMessageConn(config.DataSource)
 
 	server := tcp.NewServer(config.TCPAddr, config.TcpPort, 10*time.Second)
-	server.AddHandler(tcp.Echo)
 	server.AddHandler(tcp.Verify)
+	server.AddHandler(tcp.Router)
+	server.AddHandler(tcp.Echo)
 
 	go server.Start()
 	go func() {

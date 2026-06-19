@@ -13,16 +13,16 @@ import (
 )
 
 type Client struct {
-	uid      string
-	con      net.Conn
-	context  *Context
-	server   *Server
-	closed   bool
-	worker   chan *Message.Message
-	heart    chan any
-	finished bool
-	key      uint32
-	writeMu  sync.Mutex
+	uid       string
+	con       net.Conn
+	context   *Context
+	server    *Server
+	closed    bool
+	worker    chan *Message.Message
+	heart     chan any
+	finished  bool
+	key       uint32
+	writeMu   sync.Mutex
 	closeOnce sync.Once
 }
 
@@ -80,6 +80,7 @@ func (c *Client) MessageHandler() {
 			c.IncrKey()
 			if err := c.SendHeart(c.key); err != nil {
 				c.closed = true
+				log.Println(err)
 				return
 			}
 		case message, ok := <-c.worker:
