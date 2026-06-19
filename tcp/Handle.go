@@ -10,3 +10,6 @@ func Echo(m *Message.Message, c *Client) {
 		panic(err)
 	}
 }
+func Verify(m *Message.Message, c *Client) {
+
+}

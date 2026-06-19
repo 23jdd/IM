@@ -35,6 +35,9 @@ func Decode(data []byte) (*Message, error) {
 	if uint32(len(data)) < HeadSize+bodyLen {
 		return nil, errors.New("incomplete packet body")
 	}
+	if bodyLen == 0 {
+		return &m, nil
+	}
 	m.Data = make([]byte, bodyLen)
 	copy(m.Data, data[8:8+bodyLen])
 	return &m, nil

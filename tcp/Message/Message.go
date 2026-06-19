@@ -36,6 +36,18 @@ func TextMessage(key uint32, text string) *Message {
 func BlobMessage(key uint32, blob []byte) *Message {
 	return NewMessage(Blob, key, blob)
 }
+func NackMessage(key uint32) *Message {
+	return NewMessage(Nack, key, nil)
+}
+func AuthMessage(key uint32, token string) *Message {
+	return NewMessage(Auth, key, []byte(token))
+}
 func (m *Message) Len() uint32 {
 	return m.len
+}
+func (m *Message) GetMsgType() MsgType {
+	return m.t
+}
+func (m *Message) GetKey() uint32 {
+	return m.key
 }

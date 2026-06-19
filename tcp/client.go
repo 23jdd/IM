@@ -67,6 +67,11 @@ func (c *Client) MessageHandler() {
 		}
 	}
 }
+
+func (c *Client) Process(m *Message.Message) {
+	c.worker <- m
+}
+
 func (c *Client) SetContext(ctx any) {
 	c.context = ctx
 }
@@ -129,7 +134,22 @@ func (c *Client) SendBlob(key uint32, blob []byte) error {
 	}
 	return nil
 }
-
+func (c *Client) SendAuth(key uint32, token string) error {
+	message := Message.AuthMessage(key, token)
+	err := c.Send(message)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (c *Client) SendNack(key uint32) error {
+	message := Message.NackMessage(key)
+	err := c.Send(message)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 func (c *Client) ReadMessage() (*Message.Message, error) {
 	header := c.server.pool.Get(8)
 	_, err := io.ReadFull(c.con, header)

@@ -13,7 +13,9 @@ import (
 )
 
 func newTestServer() *tcp.Server {
-	return tcp.NewServer("", 0, 10*time.Second)
+	s := tcp.NewServer("", 0, 10*time.Second)
+	s.AddHandler(tcp.Echo)
+	return s
 }
 
 func readFullMessage(conn net.Conn) (*Message.Message, error) {
@@ -33,24 +35,23 @@ func readFullMessage(conn net.Conn) (*Message.Message, error) {
 }
 
 func TestEchoHandler(t *testing.T) {
+	server := newTestServer()
+
 	clientConn, serverConn := net.Pipe()
 	defer clientConn.Close()
 	defer serverConn.Close()
 
-	client := tcp.NewClient(serverConn, newTestServer())
+	client := tcp.NewClient(serverConn, server)
+	go client.MessageHandler()
 
-	sendData := []byte("hello echo test")
+	sendData := []byte("hello echo")
 	msg := Message.NewMessage(Message.Text, 1, sendData)
-	encoded := Message.Encode(msg)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		_, err := clientConn.Write(encoded)
-		if err != nil {
-			t.Errorf("Write failed: %v", err)
-		}
+		clientConn.Write(Message.Encode(msg))
 	}()
 
 	received, err := readFullMessage(serverConn)
@@ -59,17 +60,13 @@ func TestEchoHandler(t *testing.T) {
 	}
 	wg.Wait()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		tcp.Echo(received, client)
-	}()
+	go client.MessageHandler()
+	client.Process(received)
 
 	echoed, err := readFullMessage(clientConn)
 	if err != nil {
 		t.Fatalf("read echoed message failed: %v", err)
 	}
-	wg.Wait()
 
 	if !bytes.Equal(echoed.Data, sendData) {
 		t.Errorf("echoed data = %v, want %v", echoed.Data, sendData)
@@ -77,20 +74,22 @@ func TestEchoHandler(t *testing.T) {
 }
 
 func TestEchoHandlerEmptyData(t *testing.T) {
+	server := newTestServer()
+
 	clientConn, serverConn := net.Pipe()
 	defer clientConn.Close()
 	defer serverConn.Close()
 
-	client := tcp.NewClient(serverConn, newTestServer())
+	client := tcp.NewClient(serverConn, server)
+	go client.MessageHandler()
 
 	msg := Message.NewMessage(Message.ACK, 0, nil)
-	encoded := Message.Encode(msg)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		clientConn.Write(encoded)
+		clientConn.Write(Message.Encode(msg))
 	}()
 
 	received, err := readFullMessage(serverConn)
@@ -99,17 +98,13 @@ func TestEchoHandlerEmptyData(t *testing.T) {
 	}
 	wg.Wait()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		tcp.Echo(received, client)
-	}()
+	go client.MessageHandler()
+	client.Process(received)
 
 	echoed, err := readFullMessage(clientConn)
 	if err != nil {
 		t.Fatalf("read echoed message failed: %v", err)
 	}
-	wg.Wait()
 
 	if len(echoed.Data) != 0 {
 		t.Errorf("expected empty data, got %v", echoed.Data)
@@ -117,21 +112,23 @@ func TestEchoHandlerEmptyData(t *testing.T) {
 }
 
 func TestEchoHandlerBinaryData(t *testing.T) {
+	server := newTestServer()
+
 	clientConn, serverConn := net.Pipe()
 	defer clientConn.Close()
 	defer serverConn.Close()
 
-	client := tcp.NewClient(serverConn, newTestServer())
+	client := tcp.NewClient(serverConn, server)
+	go client.MessageHandler()
 
 	binaryData := []byte{0x00, 0xFF, 0xAB, 0xCD, 0x12, 0x34}
 	msg := Message.NewMessage(Message.Blob, 255, binaryData)
-	encoded := Message.Encode(msg)
 
 	var wg sync.WaitGroup
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		clientConn.Write(encoded)
+		clientConn.Write(Message.Encode(msg))
 	}()
 
 	received, err := readFullMessage(serverConn)
@@ -140,24 +137,59 @@ func TestEchoHandlerBinaryData(t *testing.T) {
 	}
 	wg.Wait()
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		tcp.Echo(received, client)
-	}()
+	go client.MessageHandler()
+	client.Process(received)
 
 	echoed, err := readFullMessage(clientConn)
 	if err != nil {
 		t.Fatalf("read echoed message failed: %v", err)
 	}
-	wg.Wait()
 
 	if !bytes.Equal(echoed.Data, binaryData) {
 		t.Errorf("echoed binary data mismatch")
 	}
 }
 
-func TestEchoClientSendAndRead(t *testing.T) {
+func TestEchoHandlerUTF8(t *testing.T) {
+	server := newTestServer()
+
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+
+	client := tcp.NewClient(serverConn, server)
+	go client.MessageHandler()
+
+	utf8Data := []byte("你好，世界！🚀")
+	msg := Message.NewMessage(Message.Text, 1, utf8Data)
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		clientConn.Write(Message.Encode(msg))
+	}()
+
+	received, err := readFullMessage(serverConn)
+	if err != nil {
+		t.Fatalf("readFullMessage failed: %v", err)
+	}
+	wg.Wait()
+
+	go client.MessageHandler()
+	client.Process(received)
+
+	echoed, err := readFullMessage(clientConn)
+	if err != nil {
+		t.Fatalf("read echoed message failed: %v", err)
+	}
+
+	if !bytes.Equal(echoed.Data, utf8Data) {
+		t.Errorf("UTF-8 echo mismatch")
+	}
+}
+
+func TestClientSendText(t *testing.T) {
 	clientConn, serverConn := net.Pipe()
 	defer clientConn.Close()
 	defer serverConn.Close()
@@ -168,10 +200,7 @@ func TestEchoClientSendAndRead(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := client.SendText(1, "direct send")
-		if err != nil {
-			t.Errorf("SendText failed: %v", err)
-		}
+		client.SendText(3, "text message")
 	}()
 
 	received, err := readFullMessage(clientConn)
@@ -180,12 +209,12 @@ func TestEchoClientSendAndRead(t *testing.T) {
 	}
 	wg.Wait()
 
-	if !bytes.Equal(received.Data, []byte("direct send")) {
-		t.Errorf("received = %v, want 'direct send'", received.Data)
+	if !bytes.Equal(received.Data, []byte("text message")) {
+		t.Errorf("received = %v, want 'text message'", received.Data)
 	}
 }
 
-func TestEchoClientSendJson(t *testing.T) {
+func TestClientSendJson(t *testing.T) {
 	clientConn, serverConn := net.Pipe()
 	defer clientConn.Close()
 	defer serverConn.Close()
@@ -200,10 +229,7 @@ func TestEchoClientSendJson(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := client.SendJson(7, testPayload{Msg: "hello json"})
-		if err != nil {
-			t.Errorf("SendJson failed: %v", err)
-		}
+		client.SendJson(7, testPayload{Msg: "hello json"})
 	}()
 
 	received, err := readFullMessage(clientConn)
@@ -217,35 +243,7 @@ func TestEchoClientSendJson(t *testing.T) {
 	}
 }
 
-func TestEchoClientSendText(t *testing.T) {
-	clientConn, serverConn := net.Pipe()
-	defer clientConn.Close()
-	defer serverConn.Close()
-
-	client := tcp.NewClient(serverConn, newTestServer())
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		err := client.SendText(3, "text message")
-		if err != nil {
-			t.Errorf("SendText failed: %v", err)
-		}
-	}()
-
-	received, err := readFullMessage(clientConn)
-	if err != nil {
-		t.Fatalf("readFullMessage failed: %v", err)
-	}
-	wg.Wait()
-
-	if !bytes.Equal(received.Data, []byte("text message")) {
-		t.Errorf("received = %v, want 'text message'", received.Data)
-	}
-}
-
-func TestEchoClientSendBlob(t *testing.T) {
+func TestClientSendBlob(t *testing.T) {
 	clientConn, serverConn := net.Pipe()
 	defer clientConn.Close()
 	defer serverConn.Close()
@@ -258,10 +256,7 @@ func TestEchoClientSendBlob(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := client.SendBlob(9, blob)
-		if err != nil {
-			t.Errorf("SendBlob failed: %v", err)
-		}
+		client.SendBlob(9, blob)
 	}()
 
 	received, err := readFullMessage(clientConn)
@@ -275,7 +270,7 @@ func TestEchoClientSendBlob(t *testing.T) {
 	}
 }
 
-func TestEchoClientSendAck(t *testing.T) {
+func TestClientSendAck(t *testing.T) {
 	clientConn, serverConn := net.Pipe()
 	defer clientConn.Close()
 	defer serverConn.Close()
@@ -286,10 +281,7 @@ func TestEchoClientSendAck(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := client.SendAck(15)
-		if err != nil {
-			t.Errorf("SendAck failed: %v", err)
-		}
+		client.SendAck(15)
 	}()
 
 	received, err := readFullMessage(clientConn)
@@ -298,12 +290,12 @@ func TestEchoClientSendAck(t *testing.T) {
 	}
 	wg.Wait()
 
-	if received.Len() != 0 {
-		t.Errorf("expected empty data for ACK, got %d bytes", received.Len())
+	if len(received.Data) != 0 {
+		t.Errorf("expected empty data for ACK, got %d bytes", len(received.Data))
 	}
 }
 
-func TestEchoClientSendHeart(t *testing.T) {
+func TestClientSendHeart(t *testing.T) {
 	clientConn, serverConn := net.Pipe()
 	defer clientConn.Close()
 	defer serverConn.Close()
@@ -314,10 +306,7 @@ func TestEchoClientSendHeart(t *testing.T) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		err := client.SendHeart(33)
-		if err != nil {
-			t.Errorf("SendHeart failed: %v", err)
-		}
+		client.SendHeart(33)
 	}()
 
 	received, err := readFullMessage(clientConn)
@@ -326,8 +315,8 @@ func TestEchoClientSendHeart(t *testing.T) {
 	}
 	wg.Wait()
 
-	if received.Len() != 0 {
-		t.Errorf("expected empty data for HeartBeat, got %d bytes", received.Len())
+	if len(received.Data) != 0 {
+		t.Errorf("expected empty data for HeartBeat, got %d bytes", len(received.Data))
 	}
 }
 
@@ -356,7 +345,17 @@ func TestClientContextNil(t *testing.T) {
 	}
 }
 
-func TestEchoClientMultipleMessages(t *testing.T) {
+func TestNewClient(t *testing.T) {
+	_, serverConn := net.Pipe()
+	defer serverConn.Close()
+
+	client := tcp.NewClient(serverConn, newTestServer())
+	if client == nil {
+		t.Fatal("NewClient returned nil")
+	}
+}
+
+func TestClientMultipleMessages(t *testing.T) {
 	clientConn, serverConn := net.Pipe()
 	defer clientConn.Close()
 	defer serverConn.Close()
@@ -369,10 +368,7 @@ func TestEchoClientMultipleMessages(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err := client.SendText(uint32(i), msg)
-			if err != nil {
-				t.Errorf("SendText %d failed: %v", i, err)
-			}
+			client.SendText(uint32(i), msg)
 		}()
 
 		received, err := readFullMessage(clientConn)
@@ -384,56 +380,5 @@ func TestEchoClientMultipleMessages(t *testing.T) {
 		if !bytes.Equal(received.Data, []byte(msg)) {
 			t.Errorf("msg %d: received = %v, want %v", i, received.Data, msg)
 		}
-	}
-}
-
-func TestNewClient(t *testing.T) {
-	_, serverConn := net.Pipe()
-	defer serverConn.Close()
-
-	client := tcp.NewClient(serverConn, newTestServer())
-	if client == nil {
-		t.Fatal("NewClient returned nil")
-	}
-}
-
-func TestEchoHandlerUTF8(t *testing.T) {
-	clientConn, serverConn := net.Pipe()
-	defer clientConn.Close()
-	defer serverConn.Close()
-
-	client := tcp.NewClient(serverConn, newTestServer())
-
-	utf8Data := []byte("你好，世界！🚀")
-	msg := Message.NewMessage(Message.Text, 1, utf8Data)
-	encoded := Message.Encode(msg)
-
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		clientConn.Write(encoded)
-	}()
-
-	received, err := readFullMessage(serverConn)
-	if err != nil {
-		t.Fatalf("readFullMessage failed: %v", err)
-	}
-	wg.Wait()
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		tcp.Echo(received, client)
-	}()
-
-	echoed, err := readFullMessage(clientConn)
-	if err != nil {
-		t.Fatalf("read echoed message failed: %v", err)
-	}
-	wg.Wait()
-
-	if !bytes.Equal(echoed.Data, utf8Data) {
-		t.Errorf("UTF-8 echo mismatch")
 	}
 }
