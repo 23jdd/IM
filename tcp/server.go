@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"os"
+	"os/signal"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/panjf2000/ants/v2"
@@ -63,6 +66,14 @@ func (s *Server) GetConnectCount() int32 {
 
 func (s *Server) ShutDown() {
 	s.workerPool.Release()
+
+}
+func Notify() {
+	// 创建接收信号的 channel
+	sigCh := make(chan os.Signal, 1)
+	// 监听 SIGINT 和 SIGTERM
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+
 }
 
 func (s *Server) AddHandler(h Handler) {

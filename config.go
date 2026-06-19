@@ -10,6 +10,7 @@ type Config struct {
 	HttpPort    int    `yaml:"http_port"`
 	TCPAddr     string `yaml:"tcp_address"`
 	TcpPort     int    `yaml:"tcp_port"`
+	DataSource  string `yaml:"data_source"`
 }
 
 func MustLoadConfig(configPath string) *Config {

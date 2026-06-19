@@ -29,4 +29,5 @@ go.work.sum
 
 # Editor/IDE
 .idea/
+mysql/sql/*.sql
 # .vscode/

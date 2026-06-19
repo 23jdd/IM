@@ -7,7 +7,6 @@ import (
 )
 
 var jwtSecret = []byte("imSystem-secret") // todo 从配置读取
-
 type Claims struct {
 	Uid string `json:"uid"`
 	jwt.RegisteredClaims

@@ -2,3 +2,4 @@ http_address: 127.0.0.1
 http_port: 8080
 tcp_address: 127.0.0.1
 tcp_port: 9000
+data_source: "root:password@tcp(127.0.0.1:3306)/dbname?parseTime=true&loc=UTC"
