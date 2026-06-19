@@ -1,6 +1,7 @@
 package tcp
 
 import (
+	"IM/tcp/Message"
 	"fmt"
 	"log"
 	"net"
@@ -48,6 +49,50 @@ func (c *Client) Close() {
 		log.Println(err)
 	}
 }
-func (c *Client) Send() {
-
+func (c *Client) Send(message *Message.Message) error {
+	_, err := c.con.Write(Message.Encode(message))
+	return err
+}
+func (c *Client) SendJson(key uint32, target any) error {
+	message, err := Message.JsonMessage(key, target)
+	if err != nil {
+		return err
+	}
+	err = c.Send(message)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (c *Client) SendHeart(key uint32) error {
+	message := Message.HeartMessage(key)
+	err := c.Send(message)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (c *Client) SendAck(key uint32) error {
+	message := Message.AckMessage(key)
+	err := c.Send(message)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (c *Client) SendText(key uint32, text string) error {
+	message := Message.TextMessage(key, text)
+	err := c.Send(message)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func (c *Client) SendBlob(key uint32, blob []byte) error {
+	message := Message.BlobMessage(key, blob)
+	err := c.Send(message)
+	if err != nil {
+		return err
+	}
+	return nil
 }

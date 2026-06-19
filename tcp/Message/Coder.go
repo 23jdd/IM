@@ -18,8 +18,9 @@ func Encode(m *Message) []byte {
 	buf[2] = byte((key >> 8) & 0xFF)
 	buf[3] = byte(key & 0xFF)
 	binary.BigEndian.PutUint32(buf[4:8], uint32(len(m.Data)))
-	copy(buf[8:], m.Data)
-
+	if m.Data != nil {
+		copy(buf[8:], m.Data)
+	}
 	return buf
 }
 
