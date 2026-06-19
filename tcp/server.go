@@ -4,11 +4,15 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sync/atomic"
+	"time"
 )
 
 type Server struct {
 	address string
 	port    int
+	count   atomic.Int32
+	t       time.Duration
 }
 
 func NewServer(address string, port int) *Server {
@@ -29,6 +33,14 @@ func (s *Server) Start() {
 		}
 		log.Println(con.RemoteAddr().String())
 		//TODO use ants
+		s.count.Add(1)
 		go NewClient(con).Start()
 	}
+}
+func (s *Server) GetConnectCount() int32 {
+	return s.count.Load()
+}
+
+func (s *Server) ShutDown() {
+
 }

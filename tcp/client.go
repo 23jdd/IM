@@ -3,6 +3,7 @@ package tcp
 import (
 	"IM/tcp/Message"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"time"
@@ -13,7 +14,8 @@ type Client struct {
 	uid     uint32 //  user id
 	con     net.Conn
 	context any // set expire timer
-	t       time.Duration
+	server  *Server
+	closed  bool
 }
 
 func NewClient(con net.Conn) *Client {
@@ -23,7 +25,7 @@ func NewClient(con net.Conn) *Client {
 }
 
 func (c *Client) HeartBeat() {
-	ticker := time.NewTicker(c.t)
+	ticker := time.NewTicker(c.server.t)
 	//
 	for {
 		s := <-ticker.C
@@ -33,6 +35,9 @@ func (c *Client) HeartBeat() {
 }
 func (c *Client) Start() {
 	go c.HeartBeat()
+	for {
+		c.ReadMessage()
+	}
 }
 func (c *Client) SetContext(ctx any) {
 	c.context = ctx
@@ -95,4 +100,15 @@ func (c *Client) SendBlob(key uint32, blob []byte) error {
 		return err
 	}
 	return nil
+}
+func (c *Client) ReadMessage() *Message.Message {
+	// read solve message
+
+	if err != nil {
+		return nil
+	}
+	return nil
+}
+func (c *Client) ReadAll() {
+
 }
