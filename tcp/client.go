@@ -34,7 +34,7 @@ func NewClient(con net.Conn, server *Server) *Client {
 func (c *Client) HeartBeat() {
 	ticker := time.NewTicker(c.server.t)
 	//
-	for {
+	for !c.closed {
 		s := <-ticker.C
 		fmt.Println(s.String())
 		c.OnTicker()
@@ -42,9 +42,18 @@ func (c *Client) HeartBeat() {
 }
 
 func (c *Client) Start() {
-	go c.HeartBeat()
-	go c.MessageHandler()
-	for {
+	err := c.server.workerPool.Submit(c.HeartBeat)
+	if err != nil {
+		log.Println("submit heartbeat failed:", err)
+		return
+	}
+	err = c.server.workerPool.Submit(c.MessageHandler)
+	if err != nil {
+		log.Println("submit message handler failed:", err)
+		return
+	}
+	defer c.Close()
+	for !c.closed {
 		message, err := c.ReadMessage()
 		if err != nil {
 			if errors.Is(err, io.EOF) {
@@ -59,7 +68,7 @@ func (c *Client) Start() {
 	}
 }
 func (c *Client) MessageHandler() {
-	for {
+	for !c.closed {
 		message, ok := <-c.worker
 		if !ok {
 			return
@@ -89,6 +98,7 @@ func (c *Client) Close() {
 	if err != nil {
 		log.Println(err)
 	}
+	c.server.count.Add(-1)
 }
 func (c *Client) Send(message *Message.Message) error {
 	_, err := c.con.Write(Message.Encode(message))
@@ -154,21 +164,21 @@ func (c *Client) SendNack(key uint32) error {
 	return nil
 }
 func (c *Client) ReadMessage() (*Message.Message, error) {
-	header := c.server.pool.Get(8)
+	header := c.server.bufPool.Get(8)
 	_, err := io.ReadFull(c.con, header)
 	if err != nil {
 		return nil, err
 	}
 	length := binary.BigEndian.Uint32(header[4:8])
-	buf := c.server.pool.Get(int(length) + 8)
+	buf := c.server.bufPool.Get(int(length) + 8)
 	copy(buf, header)
-	c.server.pool.Put(header)
+	c.server.bufPool.Put(header)
 	_, err = io.ReadFull(c.con, buf[8:])
 	if err != nil {
 		return nil, err
 	}
 	message, err := Message.Decode(buf)
-	c.server.pool.Put(buf)
+	c.server.bufPool.Put(buf)
 	if err != nil {
 		return nil, err
 	}
