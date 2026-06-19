@@ -21,7 +21,7 @@ func NewServer(address string, port int) *Server {
 	return &Server{
 		address: address,
 		port:    port,
-		pool:    NewTieredPool(64, 256, 1024, 1024*4, 1024*16, 1024*64),
+		pool:    NewTieredPool(8, 64, 256, 1024, 1024*4, 1024*16, 1024*64),
 	}
 }
 func (s *Server) Start() {

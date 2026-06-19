@@ -2,7 +2,10 @@ package tcp
 
 import (
 	"IM/tcp/Message"
+	"encoding/binary"
+	"errors"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"time"
@@ -17,9 +20,11 @@ type Client struct {
 	worker  chan *Message.Message
 }
 
+const WorkerSize int = 200 //
 func NewClient(con net.Conn) *Client {
 	return &Client{
-		con: con,
+		con:    con,
+		worker: make(chan *Message.Message, WorkerSize),
 	}
 }
 
@@ -37,13 +42,24 @@ func (c *Client) Start() {
 	go c.HeartBeat()
 	go c.MessageHandler()
 	for {
-		message := c.ReadMessage()
+		message, err := c.ReadMessage()
+		if err != nil {
+			if errors.Is(err, io.EOF) {
+				close(c.worker)
+			} else {
+				log.Println(err)
+				continue
+			}
+		}
 		c.worker <- message
 	}
 }
 func (c *Client) MessageHandler() {
 	for {
-		message := <-c.worker
+		message, ok := <-c.worker
+		if !ok {
+			return
+		}
 		for _, h := range c.server.clientHandlers {
 			h(message, c)
 		}
@@ -111,16 +127,25 @@ func (c *Client) SendBlob(key uint32, blob []byte) error {
 	}
 	return nil
 }
-func (c *Client) ReadMessage() *Message.Message {
-	// read solve message
-	data, err := c.ReadAll()
+
+func (c *Client) ReadMessage() (*Message.Message, error) {
+	header := c.server.pool.Get(8)
+	_, err := io.ReadFull(c.con, header)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	size, ok := Message.FullPacketSize(data)
-
-	return nil
-}
-func (c *Client) ReadAll() ([]byte, error) {
-
+	length := binary.BigEndian.Uint32(header[4:8])
+	buf := c.server.pool.Get(int(length) + 8)
+	copy(buf, header)
+	c.server.pool.Put(header)
+	_, err = io.ReadFull(c.con, buf[8:])
+	if err != nil {
+		return nil, err
+	}
+	message, err := Message.Decode(buf)
+	c.server.pool.Put(buf)
+	if err != nil {
+		return nil, err
+	}
+	return message, nil
 }
