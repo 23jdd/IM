@@ -328,3 +328,54 @@ func TestHeaderByteValues(t *testing.T) {
 		t.Errorf("Blob header byte = %d, want %d", enc[0], Message.Blob)
 	}
 }
+
+func TestGetMsgType(t *testing.T) {
+	m := Message.NewMessage(Message.Text, 42, []byte("data"))
+	if m.GetMsgType() != Message.Text {
+		t.Errorf("GetMsgType = %d, want %d", m.GetMsgType(), Message.Text)
+	}
+
+	m = Message.AckMessage(0)
+	if m.GetMsgType() != Message.ACK {
+		t.Errorf("GetMsgType = %d, want ACK", m.GetMsgType())
+	}
+}
+
+func TestGetKey(t *testing.T) {
+	m := Message.NewMessage(Message.Text, 0xABCDEF, []byte("data"))
+	if m.GetKey() != 0xABCDEF {
+		t.Errorf("GetKey = %d, want %d", m.GetKey(), 0xABCDEF)
+	}
+
+	encoded := Message.Encode(m)
+	decoded, _ := Message.Decode(encoded)
+	if decoded.GetKey() != 0xABCDEF {
+		t.Errorf("decoded GetKey = %d, want %d", decoded.GetKey(), 0xABCDEF)
+	}
+}
+
+func TestNackMessage(t *testing.T) {
+	m := Message.NackMessage(99)
+	if m.GetMsgType() != Message.Nack {
+		t.Errorf("type = %d, want Nack", m.GetMsgType())
+	}
+	if m.GetKey() != 99 {
+		t.Errorf("key = %d, want 99", m.GetKey())
+	}
+	if m.Len() != 0 {
+		t.Errorf("len = %d, want 0", m.Len())
+	}
+}
+
+func TestAuthMessage(t *testing.T) {
+	m := Message.AuthMessage(7, "token123")
+	if m.GetMsgType() != Message.Auth {
+		t.Errorf("type = %d, want Auth", m.GetMsgType())
+	}
+	if m.GetKey() != 7 {
+		t.Errorf("key = %d, want 7", m.GetKey())
+	}
+	if !bytes.Equal(m.Data, []byte("token123")) {
+		t.Errorf("data = %v, want 'token123'", m.Data)
+	}
+}

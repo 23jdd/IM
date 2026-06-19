@@ -105,6 +105,10 @@ func (c *Client) Context() *Context {
 	return c.context
 }
 
+func (c *Client) UID() string {
+	return c.uid
+}
+
 func (c *Client) OnTicker() {
 	select {
 	case c.heart <- nil:

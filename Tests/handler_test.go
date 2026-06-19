@@ -385,3 +385,124 @@ func TestClientMultipleMessages(t *testing.T) {
 		}
 	}
 }
+
+func TestClientSendAuth(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+
+	client := tcp.NewClient(serverConn, newTestServer())
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		client.SendAuth(8, "mytoken")
+	}()
+
+	received, err := readFullMessage(clientConn)
+	if err != nil {
+		t.Fatalf("readFullMessage failed: %v", err)
+	}
+	wg.Wait()
+
+	if received.GetMsgType() != Message.Auth {
+		t.Errorf("type = %d, want Auth", received.GetMsgType())
+	}
+	if !bytes.Equal(received.Data, []byte("mytoken")) {
+		t.Errorf("data = %v, want 'mytoken'", received.Data)
+	}
+}
+
+func TestClientSendNack(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+
+	client := tcp.NewClient(serverConn, newTestServer())
+
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		client.SendNack(5)
+	}()
+
+	received, err := readFullMessage(clientConn)
+	if err != nil {
+		t.Fatalf("readFullMessage failed: %v", err)
+	}
+	wg.Wait()
+
+	if received.GetMsgType() != Message.Nack {
+		t.Errorf("type = %d, want Nack", received.GetMsgType())
+	}
+	if received.GetKey() != 5 {
+		t.Errorf("key = %d, want 5", received.GetKey())
+	}
+}
+
+func TestClientWriteConcurrency(t *testing.T) {
+	clientConn, serverConn := net.Pipe()
+	defer clientConn.Close()
+	defer serverConn.Close()
+
+	client := tcp.NewClient(serverConn, newTestServer())
+
+	const goroutines = 20
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+
+	for i := 0; i < goroutines; i++ {
+		go func(idx int) {
+			defer wg.Done()
+			msg := []byte("concurrent")
+			if err := client.SendText(uint32(idx), string(msg)); err != nil {
+				t.Errorf("goroutine %d: SendText failed: %v", idx, err)
+			}
+		}(i)
+	}
+
+	received := make(map[uint32]bool)
+	for i := 0; i < goroutines; i++ {
+		resp, err := readFullMessage(clientConn)
+		if err != nil {
+			t.Fatalf("readFullMessage %d failed: %v", i, err)
+		}
+		key := resp.GetKey()
+		if received[key] {
+			t.Errorf("duplicate key %d", key)
+		}
+		received[key] = true
+		if !bytes.Equal(resp.Data, []byte("concurrent")) {
+			t.Errorf("key %d: data corrupted: %v", key, resp.Data)
+		}
+	}
+	wg.Wait()
+
+	if len(received) != goroutines {
+		t.Errorf("expected %d unique messages, got %d", goroutines, len(received))
+	}
+}
+
+func TestClientDoubleClose(t *testing.T) {
+	_, serverConn := net.Pipe()
+	defer serverConn.Close()
+
+	client := tcp.NewClient(serverConn, newTestServer())
+
+	client.Close()
+	client.Close()
+	// should not panic
+}
+
+func TestClientIncrKey(t *testing.T) {
+	_, serverConn := net.Pipe()
+	defer serverConn.Close()
+
+	client := tcp.NewClient(serverConn, newTestServer())
+
+	for i := 0; i < 10; i++ {
+		client.IncrKey()
+	}
+}

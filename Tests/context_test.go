@@ -95,3 +95,25 @@ func TestContextMultipleKeys(t *testing.T) {
 		t.Errorf("key 'c': got %v, want 3.14", v)
 	}
 }
+
+func TestContextDel(t *testing.T) {
+	ctx := tcp.NewContext()
+
+	ctx.Set("key", "value")
+	_, ok := ctx.Get("key")
+	if !ok {
+		t.Fatal("expected key to exist before delete")
+	}
+
+	ctx.Del("key")
+	_, ok = ctx.Get("key")
+	if ok {
+		t.Error("expected key to not exist after delete")
+	}
+}
+
+func TestContextDelNonExistent(t *testing.T) {
+	ctx := tcp.NewContext()
+	ctx.Del("nonexistent")
+	// should not panic
+}

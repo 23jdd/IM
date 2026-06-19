@@ -113,6 +113,19 @@ func (s *Server) RouteTo(uid string, m *Message.Message) error {
 	return c.Send(m)
 }
 
+func (s *Server) Register(uid string, c *Client) {
+	s.clients.Store(uid, c)
+}
+
+func (s *Server) Lookup(uid string) (*Client, bool) {
+	val, ok := s.clients.Load(uid)
+	if !ok {
+		return nil, false
+	}
+	c, ok := val.(*Client)
+	return c, ok
+}
+
 func NotifyServer(s *Server) {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
