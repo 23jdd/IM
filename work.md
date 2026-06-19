@@ -105,7 +105,75 @@ SIGINT/SIGTERM → NotifyServer → ShutDown:
 | Text | 5 | 文本聊天 |
 | Blob | 6 | 二进制数据 |
 
-## 目录结构
+## 数据库设计
+
+### MySQL — 关系型数据
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  user                好友关系              群组                  │
+│  ┌──────────────┐    ┌────────────────┐    ┌──────────────┐     │
+│  │ uid          │◄───│ uid            │    │ group_id     │     │
+│  │ password_hash│    │ friend_uid     │───►│ name         │     │
+│  │ name         │    │ status         │    │ owner_uid    │     │
+│  │ avatar       │    │ remark         │    │ member_count │     │
+│  │ gender       │    │ created_at     │    │ status       │     │
+│  │ signature    │    └────────────────┘    └──────────────┘     │
+│  │ phone        │                                 │             │
+│  │ email        │                          ┌──────────────┐     │
+│  │ status       │                          │ group_member │     │
+│  └──────────────┘                          │ group_id     │     │
+│                                            │ uid          │     │
+│  chat_message                              │ role         │     │
+│  ┌──────────────┐                          │ nickname     │     │
+│  │ msg_id       │                          │ mute_until   │     │
+│  │ from_uid     │                          └──────────────┘     │
+│  │ to_uid       │                                                │
+│  │ group_id     │                                                │
+│  │ msg_type     │                                                │
+│  │ content      │                                                │
+│  │ status       │  0=未读 1=已读 2=已撤回                          │
+│  └──────────────┘                                                │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**表职责**:
+
+| 表 | 用途 | 关键索引 |
+|----|------|----------|
+| `user` | 用户资料 | uid(PK) |
+| `chat_message` | 离线消息存储 | (to_uid, status), from_uid, group_id |
+| `friend_relation` | 好友关系 | (uid, friend_uid) UNIQUE, (uid, status) |
+| `group_info` | 群组元数据 | group_id(PK), owner_uid |
+| `group_member` | 群成员 | (group_id, uid) UNIQUE, uid |
+
+### MongoDB — 海量消息归档
+
+```
+Collection: messages
+
+{
+  "msg_id":     "1234567890",
+  "from_uid":   "user_a",
+  "to_uid":     "user_b",
+  "group_id":   "",
+  "msg_type":   5,
+  "content":    "hello",
+  "status":     0,
+  "created_at": ISODate("2026-06-19T12:00:00Z")
+}
+
+索引:
+  - {to_uid: 1, status: 1}              ← 离线消息查询
+  - {from_uid: 1, to_uid: 1, created_at: -1}  ← 单聊历史翻页
+  - {group_id: 1, created_at: -1}       ← 群聊历史翻页
+```
+
+**存储分工**:
+- **MySQL**: 存最近的离线消息（status=0），上线拉取后标记为已读或删除
+- **MongoDB**: 全量消息归档，支持历史翻页和搜索
+
+### 目录结构
 
 ```
 IM/
@@ -127,11 +195,38 @@ IM/
 │   ├── user.go            用户服务
 │   └── message.go         消息服务
 ├── model/                共享数据模型
-│   └── message.go         ChatMessage 结构体
+│   ├── message.go         ChatMessage 结构体
+│   ├── friend.go          FriendRelation 结构体
+│   └── group.go           GroupInfo/GroupMember 结构体
 ├── mysql/                MySQL 数据层
 │   ├── init.go           初始化连接
 │   ├── models.go         导出 UserModel
 │   ├── message.go         消息 CRUD
+│   ├── friend.go          好友 CRUD
+│   ├── group.go           群组 CRUD
+│   ├── model/             goctl 生成的 User Model
+│   └── sql/               DDL 脚本
+├── mongdb/               MongoDB 数据层
+│   ├── init.go           连接初始化
+│   └── message.go        消息存储/历史查询/离线拉取
+├── utils/                工具
+│   ├── snowflake.go      雪花 ID 生成器
+│   └── jwt.go            JWT 生成/解析
+├── Tests/                测试（90 个用例）
+│   ├── message_test.go   协议编解码测试
+│   ├── pool_test.go      内存池测试
+│   ├── context_test.go   Context 测试
+│   ├── handler_test.go   Handler/Client 发送测试
+│   ├── server_test.go    Server 测试
+│   ├── verify_test.go    Verify/RouteTo 测试
+│   ├── router_test.go    Router 分发测试
+│   ├── connect_test.go   真实 TCP 连接测试
+│   └── db_test.go        数据模型测试
+├── gateway/              WebSocket 接入（待建）
+├── redis/                Redis 缓存（待建）
+├── rabbitmq/             消息队列（待建）
+└── log/                  日志（待建）
+```
 │   ├── model/             goctl 生成的 User Model
 │   └── sql/               DDL 脚本
 ├── utils/                工具
