@@ -14,7 +14,7 @@ func NewMessage(t MsgType, key uint32, data []byte) *Message {
 		t:    t,
 		key:  key,
 		len:  uint32(len(data)),
-		Data: nil,
+		Data: data,
 	}
 }
 func AckMessage(key uint32) *Message {

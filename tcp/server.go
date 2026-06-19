@@ -17,11 +17,12 @@ type Server struct {
 	clientHandlers []Handler
 }
 
-func NewServer(address string, port int) *Server {
+func NewServer(address string, port int, t time.Duration) *Server {
 	return &Server{
 		address: address,
 		port:    port,
 		pool:    NewTieredPool(8, 64, 256, 1024, 1024*4, 1024*16, 1024*64),
+		t:       t,
 	}
 }
 func (s *Server) Start() {
