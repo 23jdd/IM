@@ -1,4 +1,4 @@
-http_address: 0.0.0.0
+http_address: 127.0.0.1
 http_port: 8080
-tcp_address: 0.0.0.0
+tcp_address: 127.0.0.1
 tcp_port: 9000

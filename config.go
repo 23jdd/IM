@@ -1,25 +1,34 @@
 package main
 
-import "github.com/spf13/viper"
+import (
+	"github.com/go-viper/mapstructure/v2"
+	"github.com/spf13/viper"
+)
 
 type Config struct {
 	HttpAddress string `yaml:"http_address"`
-	HttpPort    int    `yaml:"http-port"`
-	TCPAddr     string `yaml:"tcp-addr"`
-	TcpPort     int    `yaml:"tcp-port"`
+	HttpPort    int    `yaml:"http_port"`
+	TCPAddr     string `yaml:"tcp_address"`
+	TcpPort     int    `yaml:"tcp_port"`
 }
 
-func MustLoadConfig() *Config {
-	viper.AddConfigPath(".")
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	err := viper.ReadInConfig()
-	if err != nil {
+func MustLoadConfig(configPath string) *Config {
+	v := viper.New()
+	if configPath != "" {
+		v.AddConfigPath(configPath)
+	} else {
+		v.AddConfigPath(".")
+	}
+	v.SetConfigName("config")
+	v.SetConfigType("yaml")
+	if err := v.ReadInConfig(); err != nil {
 		panic(err)
 	}
+
 	var c Config
-	err = viper.Unmarshal(&c)
-	if err != nil {
+	if err := v.Unmarshal(&c, viper.DecoderConfigOption(func(config *mapstructure.DecoderConfig) {
+		config.TagName = "yaml"
+	})); err != nil {
 		panic(err)
 	}
 	return &c

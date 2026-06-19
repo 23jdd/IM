@@ -20,9 +20,11 @@ func NewClient(con net.Conn) *Client {
 
 func (c *Client) HeartBeat() {
 	ticker := time.NewTicker(2 * time.Second)
-	s := <-ticker.C
-	fmt.Println(s.String())
-	c.OnTicker()
+	for {
+		s := <-ticker.C
+		fmt.Println(s.String())
+		c.OnTicker()
+	}
 }
 func (c *Client) Start() {
 	go c.HeartBeat()

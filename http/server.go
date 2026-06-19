@@ -18,7 +18,7 @@ func NewServer(address string, port int) *Server {
 	}
 }
 func (s *Server) Start() {
-	gin.SetMode(gin.ReleaseMode)
+	//gin.SetMode(gin.ReleaseMode)
 	router := gin.Default()
 	if err := router.Run(fmt.Sprintf("%s:%d", s.address, s.port)); err != nil {
 		panic(err)

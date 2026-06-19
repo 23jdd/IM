@@ -2,6 +2,7 @@ package tcp
 
 import (
 	"fmt"
+	"log"
 	"net"
 )
 
@@ -26,6 +27,8 @@ func (s *Server) Start() {
 		if err != nil {
 			continue
 		}
+		log.Println(con.RemoteAddr().String())
+		//TODO use ants
 		go NewClient(con).Start()
 	}
 }
