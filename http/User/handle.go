@@ -414,6 +414,23 @@ func RemoveFriend(c *gin.Context) {
 	ok(c, nil)
 }
 
+func InviteToGroup(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		GroupId   string `json:"group_id" binding:"required"`
+		FriendUid string `json:"friend_uid" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	if err := service.InviteToGroup(c.Request.Context(), req.GroupId, uid, req.FriendUid); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, nil)
+}
+
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		auth := c.GetHeader("Authorization")

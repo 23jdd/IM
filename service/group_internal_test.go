@@ -3,6 +3,7 @@ package service
 import (
 	"IM/model"
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
 )
@@ -70,5 +71,84 @@ func TestGetUserGroupList(t *testing.T) {
 	}
 	if len(list) != 2 || list[0].GroupId != "g1" || list[0].Name != "Group One" {
 		t.Errorf("unexpected group list: %+v", list)
+	}
+}
+
+func TestInviteToGroupByMember(t *testing.T) {
+	origFind := findGroupMembers
+	origIns := insertGroupMember
+	defer func() { findGroupMembers = origFind; insertGroupMember = origIns; SetNotifier(nil) }()
+
+	findGroupMembers = func(ctx context.Context, groupId string) ([]*model.GroupMember, error) {
+		return []*model.GroupMember{{Uid: "inviter"}}, nil
+	}
+	var inserted *model.GroupMember
+	insertGroupMember = func(ctx context.Context, m *model.GroupMember) error {
+		inserted = m
+		return nil
+	}
+	var notifyUid string
+	var payload map[string]any
+	SetNotifier(func(toUid string, p []byte) {
+		notifyUid = toUid
+		_ = json.Unmarshal(p, &payload)
+	})
+
+	if err := InviteToGroup(context.Background(), "g1", "inviter", "t"); err != nil {
+		t.Fatal(err)
+	}
+	if inserted == nil || inserted.GroupId != "g1" || inserted.Uid != "t" ||
+		inserted.Role != model.GroupRoleMember {
+		t.Errorf("inserted member wrong: %+v", inserted)
+	}
+	if notifyUid != "t" {
+		t.Errorf("notify target = %s, want t", notifyUid)
+	}
+	if payload["event"] != "group_invite" || payload["group_id"] != "g1" || payload["from_uid"] != "inviter" {
+		t.Errorf("unexpected notify payload: %+v", payload)
+	}
+}
+
+func TestInviteToGroupNonMemberRejected(t *testing.T) {
+	origFind := findGroupMembers
+	origIns := insertGroupMember
+	defer func() { findGroupMembers = origFind; insertGroupMember = origIns }()
+
+	findGroupMembers = func(ctx context.Context, groupId string) ([]*model.GroupMember, error) {
+		return []*model.GroupMember{{Uid: "other"}}, nil
+	}
+	insCalled := false
+	insertGroupMember = func(ctx context.Context, m *model.GroupMember) error {
+		insCalled = true
+		return nil
+	}
+
+	if err := InviteToGroup(context.Background(), "g1", "inviter", "t"); err == nil {
+		t.Fatal("expected error when inviter is not a member")
+	}
+	if insCalled {
+		t.Error("insertGroupMember must not be called when inviter is not a member")
+	}
+}
+
+func TestInviteToGroupAlreadyMember(t *testing.T) {
+	origFind := findGroupMembers
+	origIns := insertGroupMember
+	defer func() { findGroupMembers = origFind; insertGroupMember = origIns }()
+
+	findGroupMembers = func(ctx context.Context, groupId string) ([]*model.GroupMember, error) {
+		return []*model.GroupMember{{Uid: "inviter"}, {Uid: "t"}}, nil
+	}
+	insCalled := false
+	insertGroupMember = func(ctx context.Context, m *model.GroupMember) error {
+		insCalled = true
+		return nil
+	}
+
+	if err := InviteToGroup(context.Background(), "g1", "inviter", "t"); err == nil {
+		t.Fatal("expected error when target already in group")
+	}
+	if insCalled {
+		t.Error("insertGroupMember must not be called when target already a member")
 	}
 }

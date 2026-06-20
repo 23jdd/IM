@@ -64,6 +64,18 @@ async function handleNotify(d) {
       message: `${d.from_uid || ''} 接受了你的好友申请`,
       type: 'success',
     })
+  } else if (d.event === 'group_invite') {
+    try {
+      const groups = await api.groupList(user.token)
+      chat.loadGroups(groups || [])
+    } catch (e) {
+      /* ignore */
+    }
+    ElNotification({
+      title: '群聊邀请',
+      message: `${d.from_uid || ''} 邀请你加入了群聊`,
+      type: 'info',
+    })
   }
 }
 

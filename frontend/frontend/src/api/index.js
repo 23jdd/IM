@@ -36,6 +36,8 @@ export const api = {
   groupList: (token) => AuthService.GroupList(token),
   groupJoin: (token, groupId) => AuthService.GroupJoin(token, groupId),
   groupMembers: (token, groupId) => AuthService.GroupMembers(token, groupId),
+  groupInvite: (token, groupId, friendUid) =>
+    AuthService.GroupInvite(token, groupId, friendUid),
 
   // ---- TCP 实时 (ChatService) ----
   connect: () => ChatService.Connect(TCP_ADDR),

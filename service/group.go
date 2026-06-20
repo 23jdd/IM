@@ -16,6 +16,7 @@ var (
 	insertGroup            = mysql.InsertGroup
 	insertGroupMember      = mysql.InsertGroupMember
 	findUserGroupsWithInfo = mysql.FindUserGroupsWithInfo
+	findGroupMembers       = mysql.FindGroupMembers
 )
 
 func CreateGroup(ctx context.Context, ownerUid, name, description string) (*model.GroupInfo, error) {
@@ -86,4 +87,36 @@ func GetUserGroups(ctx context.Context, uid string) ([]*model.GroupMember, error
 // GetUserGroupList 返回用户加入的群（含群名），供"我的群聊"列表展示。
 func GetUserGroupList(ctx context.Context, uid string) ([]*model.GroupBrief, error) {
 	return findUserGroupsWithInfo(ctx, uid)
+}
+
+// InviteToGroup 由群成员 inviterUid 邀请 targetUid 入群，入群后实时通知对方。
+func InviteToGroup(ctx context.Context, groupId, inviterUid, targetUid string) error {
+	members, err := findGroupMembers(ctx, groupId)
+	if err != nil {
+		return fmt.Errorf("find members: %w", err)
+	}
+	isMember := false
+	for _, m := range members {
+		if m.Uid == targetUid {
+			return errors.New("对方已在群中")
+		}
+		if m.Uid == inviterUid {
+			isMember = true
+		}
+	}
+	if !isMember {
+		return errors.New("只有群成员才能邀请")
+	}
+
+	if err := insertGroupMember(ctx, &model.GroupMember{
+		GroupId:  groupId,
+		Uid:      targetUid,
+		Role:     model.GroupRoleMember,
+		JoinedAt: time.Now(),
+	}); err != nil {
+		return fmt.Errorf("add member: %w", err)
+	}
+
+	notify(targetUid, "group_invite", map[string]any{"group_id": groupId, "from_uid": inviterUid})
+	return nil
 }

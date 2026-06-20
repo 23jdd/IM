@@ -20,6 +20,28 @@ const membersVisible = ref(false)
 const members = ref([])
 const loadingMembers = ref(false)
 const roleLabels = { 0: '成员', 1: '管理员', 2: '群主' }
+const inviteUid = ref('')
+const inviting = ref(false)
+
+async function doInvite() {
+  const c = conv.value
+  const uid = inviteUid.value.trim()
+  if (!c || !uid) {
+    ElMessage.warning('请输入对方 UID')
+    return
+  }
+  inviting.value = true
+  try {
+    await api.groupInvite(user.token, c.uid, uid)
+    ElMessage.success('已邀请入群')
+    inviteUid.value = ''
+    members.value = (await api.groupMembers(user.token, c.uid)) || []
+  } catch (e) {
+    ElMessage.error(String(e?.message || e))
+  } finally {
+    inviting.value = false
+  }
+}
 
 async function showMembers() {
   const c = conv.value
@@ -153,6 +175,23 @@ function onKeydown(e) {
           <span class="member-role">{{ roleLabels[mem.role] || '成员' }}</span>
         </div>
         <div v-if="!members.length" class="member-empty">暂无成员</div>
+        <div class="invite-box">
+          <el-input
+            v-model="inviteUid"
+            size="small"
+            placeholder="输入对方 UID 邀请入群"
+            @keyup.enter="doInvite"
+          />
+          <el-button
+            size="small"
+            type="primary"
+            color="#07c160"
+            :loading="inviting"
+            @click="doInvite"
+          >
+            邀请
+          </el-button>
+        </div>
       </el-dialog>
     </template>
   </div>
@@ -345,5 +384,12 @@ function onKeydown(e) {
   color: var(--wx-text-sub);
   font-size: 12px;
   padding: 20px;
+}
+.invite-box {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--wx-border);
 }
 </style>

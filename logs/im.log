@@ -10,3 +10,7 @@
 {"level":"info","time":"2026-06-20T17:49:12.522+0800","caller":"log/init.go:61","msg":"all services started"}
 {"level":"info","time":"2026-06-20T18:30:38.329+0800","caller":"log/init.go:61","msg":"starting IM server"}
 {"level":"info","time":"2026-06-20T18:30:38.426+0800","caller":"log/init.go:61","msg":"all services started"}
+{"level":"info","time":"2026-06-20T19:00:15.460+0800","caller":"log/init.go:61","msg":"starting IM server"}
+{"level":"info","time":"2026-06-20T19:00:15.570+0800","caller":"log/init.go:61","msg":"all services started"}
+{"level":"info","time":"2026-06-20T19:01:43.882+0800","caller":"log/init.go:61","msg":"starting IM server"}
+{"level":"info","time":"2026-06-20T19:01:43.953+0800","caller":"log/init.go:61","msg":"all services started"}

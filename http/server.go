@@ -53,6 +53,7 @@ func (s *Server) Start() {
 			auth.GET("/group/list", User.GetMyGroups)
 			auth.GET("/group/members", User.GetGroupMembers)
 			auth.POST("/group/join", User.JoinGroup)
+			auth.POST("/group/invite", User.InviteToGroup)
 		}
 	}
 

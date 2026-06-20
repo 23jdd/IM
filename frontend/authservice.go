@@ -260,6 +260,14 @@ func (a *AuthService) GroupJoin(token, groupId string) error {
 	}, nil)
 }
 
+// GroupInvite 邀请好友入群（仅群成员可邀请）。
+func (a *AuthService) GroupInvite(token, groupId, friendUid string) error {
+	return a.do(http.MethodPost, "/api/group/invite", token, map[string]string{
+		"group_id":   groupId,
+		"friend_uid": friendUid,
+	}, nil)
+}
+
 type GroupMemberInfo struct {
 	Uid      string `json:"uid"`
 	Role     int    `json:"role"`

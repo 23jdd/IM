@@ -136,6 +136,17 @@ export function GroupCreate(token, name, description) {
 }
 
 /**
+ * GroupInvite 邀请好友入群（仅群成员可邀请）。
+ * @param {string} token
+ * @param {string} groupId
+ * @param {string} friendUid
+ * @returns {$CancellablePromise<void>}
+ */
+export function GroupInvite(token, groupId, friendUid) {
+    return $Call.ByID(1297826583, token, groupId, friendUid);
+}
+
+/**
  * GroupJoin 加入群组。
  * @param {string} token
  * @param {string} groupId
