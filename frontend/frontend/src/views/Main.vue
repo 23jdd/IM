@@ -76,6 +76,12 @@ async function handleNotify(d) {
       message: `${d.from_uid || ''} 邀请你加入了群聊`,
       type: 'info',
     })
+  } else if (d.event === 'mention') {
+    ElNotification({
+      title: '有人@你',
+      message: `${d.from_uid || ''} 在群聊里@了你`,
+      type: 'warning',
+    })
   }
 }
 

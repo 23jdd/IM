@@ -118,11 +118,12 @@ func (s *ChatService) SendText(toUid, content string) (uint32, error) {
 	return key, nil
 }
 
-// SendGroupText 发送群聊文本消息，body 为 {group_id, content} 的 JSON。
-func (s *ChatService) SendGroupText(groupId, content string) (uint32, error) {
-	payload, _ := json.Marshal(map[string]string{
+// SendGroupText 发送群聊文本消息，body 为 {group_id, content, mentions} 的 JSON。
+func (s *ChatService) SendGroupText(groupId, content string, mentions []string) (uint32, error) {
+	payload, _ := json.Marshal(map[string]any{
 		"group_id": groupId,
 		"content":  content,
+		"mentions": mentions,
 	})
 	key := s.nextKey()
 	if err := s.write(msgText, key, payload); err != nil {

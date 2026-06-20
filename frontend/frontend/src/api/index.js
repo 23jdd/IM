@@ -43,7 +43,8 @@ export const api = {
   connect: () => ChatService.Connect(TCP_ADDR),
   authTcp: (token) => ChatService.Auth(token),
   sendText: (toUid, content) => ChatService.SendText(toUid, content),
-  sendGroupText: (groupId, content) => ChatService.SendGroupText(groupId, content),
+  sendGroupText: (groupId, content, mentions) =>
+    ChatService.SendGroupText(groupId, content, mentions || []),
   sync: () => ChatService.Sync(),
   disconnect: () => ChatService.Disconnect(),
 }

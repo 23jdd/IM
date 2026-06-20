@@ -18,9 +18,10 @@ var (
 )
 
 type TextChatPayload struct {
-	ToUid   string `json:"to_uid"`
-	GroupId string `json:"group_id"`
-	Content string `json:"content"`
+	ToUid    string   `json:"to_uid"`
+	GroupId  string   `json:"group_id"`
+	Content  string   `json:"content"`
+	Mentions []string `json:"mentions"`
 }
 
 // RealtimeTextPayload 是服务端路由给接收方的实时文本帧体，携带发送者信息，
@@ -126,6 +127,25 @@ func handleGroupMessage(m *Message.Message, c *Client, payload TextChatPayload) 
 		}
 		if err := c.server.RouteTo(mem.Uid, frame); err != nil {
 			log.Printf("group: route to %s failed (offline): %v", mem.Uid, err)
+		}
+	}
+
+	// @提醒：给被 @ 的在群成员额外推一条 mention 通知（在线即时弹出）。
+	if len(payload.Mentions) > 0 {
+		memberSet := make(map[string]bool, len(members))
+		for _, mem := range members {
+			memberSet[mem.Uid] = true
+		}
+		mentionPayload, _ := json.Marshal(map[string]any{
+			"event":    "mention",
+			"group_id": payload.GroupId,
+			"from_uid": c.UID(),
+		})
+		for _, uid := range payload.Mentions {
+			if uid == c.UID() || !memberSet[uid] {
+				continue
+			}
+			_ = c.server.RouteTo(uid, Message.NewMessage(Message.Json, 0, mentionPayload))
 		}
 	}
 }

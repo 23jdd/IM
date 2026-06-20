@@ -43,6 +43,32 @@ async function doInvite() {
   }
 }
 
+const mentions = ref([]) // [{uid, name}]
+const mentionVisible = ref(false)
+
+async function openMention() {
+  const c = conv.value
+  if (!c || !c.isGroup) return
+  if (!members.value.length) {
+    try {
+      members.value = (await api.groupMembers(user.token, c.uid)) || []
+    } catch (e) {
+      /* ignore */
+    }
+  }
+  mentionVisible.value = true
+}
+
+function pickMention(mem) {
+  const name = mem.nickname || mem.uid
+  const sep = draft.value && !draft.value.endsWith(' ') ? ' ' : ''
+  draft.value += sep + '@' + name + ' '
+  if (!mentions.value.find((m) => m.uid === mem.uid)) {
+    mentions.value.push({ uid: mem.uid, name })
+  }
+  mentionVisible.value = false
+}
+
 async function showMembers() {
   const c = conv.value
   if (!c) return
@@ -79,11 +105,19 @@ async function send() {
     ElMessage.warning('未连接到服务器')
     return
   }
+  const fullText = draft.value
   draft.value = ''
   try {
-    const key = c.isGroup
-      ? await api.sendGroupText(c.uid, text)
-      : await api.sendText(c.uid, text)
+    let key
+    if (c.isGroup) {
+      const ids = mentions.value
+        .filter((m) => fullText.includes('@' + m.name))
+        .map((m) => m.uid)
+      key = await api.sendGroupText(c.uid, text, Array.from(new Set(ids)))
+      mentions.value = []
+    } else {
+      key = await api.sendText(c.uid, text)
+    }
     chat.addOutgoing(c.uid, text, Number(key))
     scrollToBottom()
   } catch (e) {
@@ -154,6 +188,7 @@ function onKeydown(e) {
           @keydown="onKeydown"
         ></textarea>
         <div class="send-row">
+          <el-button v-if="conv.isGroup" class="at-btn" text @click="openMention">@</el-button>
           <el-button
             class="send-btn"
             color="#07c160"
@@ -192,6 +227,21 @@ function onKeydown(e) {
             邀请
           </el-button>
         </div>
+      </el-dialog>
+
+      <el-dialog v-model="mentionVisible" title="@ 群成员" width="300px" align-center>
+        <div
+          v-for="mem in members"
+          :key="mem.uid"
+          class="member-row pick"
+          @click="pickMention(mem)"
+        >
+          <Avatar :uid="mem.uid" :name="mem.nickname || mem.uid" :size="32" />
+          <div class="member-info">
+            <div class="member-name">{{ mem.nickname || mem.uid }}</div>
+          </div>
+        </div>
+        <div v-if="!members.length" class="member-empty">暂无成员</div>
       </el-dialog>
     </template>
   </div>
@@ -391,5 +441,17 @@ function onKeydown(e) {
   margin-top: 10px;
   padding-top: 10px;
   border-top: 1px solid var(--wx-border);
+}
+.at-btn {
+  margin-right: auto;
+  font-size: 18px;
+  color: var(--wx-text-sub);
+}
+.member-row.pick {
+  cursor: pointer;
+  border-radius: 4px;
+}
+.member-row.pick:hover {
+  background: var(--wx-list-hover);
 }
 </style>

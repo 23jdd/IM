@@ -88,3 +88,73 @@ func TestGroupMessageFanOut(t *testing.T) {
 	check(m2Conn, "m2")
 	check(m3Conn, "m3")
 }
+
+func TestGroupMentionNotifiesMentioned(t *testing.T) {
+	origMembers := getGroupMembers
+	origSend := sendGroupMessage
+	defer func() { getGroupMembers = origMembers; sendGroupMessage = origSend }()
+
+	getGroupMembers = func(ctx context.Context, groupId string) ([]*model.GroupMember, error) {
+		return []*model.GroupMember{{Uid: "sender"}, {Uid: "m2"}}, nil
+	}
+	now := time.Now()
+	sendGroupMessage = func(ctx context.Context, fromUid, groupId string, msgType byte, content string) (*model.ChatMessage, error) {
+		return &model.ChatMessage{MsgId: "gm1", FromUid: fromUid, GroupId: groupId, Content: content, CreatedAt: now}, nil
+	}
+
+	server := NewServer("", 0, 10*time.Second)
+	server.AddHandler(Router)
+
+	senderConn, senderServerConn := net.Pipe()
+	defer senderConn.Close()
+	defer senderServerConn.Close()
+	sender := NewClient(senderServerConn, server)
+	sender.setUID("sender")
+	go sender.MessageHandler()
+
+	m2Conn, m2ServerConn := net.Pipe()
+	defer m2Conn.Close()
+	defer m2ServerConn.Close()
+	m2 := NewClient(m2ServerConn, server)
+	m2.setUID("m2")
+	server.Register("m2", m2)
+
+	body, _ := json.Marshal(map[string]any{
+		"group_id": "g1",
+		"content":  "hi @m2",
+		"mentions": []string{"m2"},
+	})
+	sender.Process(Message.NewMessage(Message.Text, 1, body))
+
+	// 写顺序：ACK(sender) -> Text(m2 群消息) -> Json(m2 mention)
+	ack, err := readFrame(senderConn)
+	if err != nil {
+		t.Fatalf("read ack: %v", err)
+	}
+	if ack.GetMsgType() != Message.ACK {
+		t.Errorf("expected ACK, got %d", ack.GetMsgType())
+	}
+
+	textFrame, err := readFrame(m2Conn)
+	if err != nil {
+		t.Fatalf("read group msg: %v", err)
+	}
+	if textFrame.GetMsgType() != Message.Text {
+		t.Errorf("expected Text group msg, got %d", textFrame.GetMsgType())
+	}
+
+	mentionFrame, err := readFrame(m2Conn)
+	if err != nil {
+		t.Fatalf("read mention: %v", err)
+	}
+	if mentionFrame.GetMsgType() != Message.Json {
+		t.Errorf("expected Json mention, got %d", mentionFrame.GetMsgType())
+	}
+	var n map[string]any
+	if err := json.Unmarshal(mentionFrame.Data, &n); err != nil {
+		t.Fatalf("unmarshal mention: %v", err)
+	}
+	if n["event"] != "mention" || n["group_id"] != "g1" || n["from_uid"] != "sender" {
+		t.Errorf("unexpected mention payload: %+v", n)
+	}
+}
