@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { parseFileMsg } from '../utils/filemsg'
+import { parseStickerMsg } from '../utils/sticker'
 import { api } from '../api'
 
 let _mid = 0
@@ -9,6 +10,7 @@ function nextId() {
 }
 
 function preview(content) {
+  if (parseStickerMsg(content)) return '[表情]'
   const f = parseFileMsg(content)
   if (f) return f.kind === 'image' ? '[图片]' : '[文件]'
   return content

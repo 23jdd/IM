@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, nextTick, watch } from 'vue'
+import { ref, reactive, computed, nextTick, watch, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
   Promotion,
@@ -14,6 +14,7 @@ import { useChatStore } from '../store/chat'
 import { useUserStore } from '../store/user'
 import { api } from '../api'
 import { buildFileMsg, parseFileMsg, humanSize } from '../utils/filemsg'
+import { buildStickerMsg, parseStickerMsg, stickerSrc, loadStickers } from '../utils/sticker'
 import Avatar from './Avatar.vue'
 
 const chat = useChatStore()
@@ -55,6 +56,34 @@ function imageUrl(fileId) {
 
 function fileOf(content) {
   return parseFileMsg(content)
+}
+
+function stickerOf(content) {
+  return parseStickerMsg(content)
+}
+
+const stickers = ref([])
+onMounted(async () => {
+  stickers.value = await loadStickers()
+})
+
+async function sendSticker(name) {
+  const c = conv.value
+  if (!c) return
+  if (!chat.connected) {
+    ElMessage.warning('未连接到服务器')
+    return
+  }
+  const content = buildStickerMsg(name)
+  try {
+    const key = c.isGroup
+      ? await api.sendGroupText(c.uid, content, [])
+      : await api.sendText(c.uid, content)
+    chat.addOutgoing(c.uid, content, Number(key))
+    scrollToBottom()
+  } catch (e) {
+    ElMessage.error('发送失败：' + String(e?.message || e))
+  }
 }
 
 function pickImage() {
@@ -314,7 +343,13 @@ function onKeydown(e) {
             :size="38"
           />
           <div class="bubble-wrap">
-            <template v-if="fileOf(m.content)">
+            <img
+              v-if="stickerOf(m.content)"
+              :src="stickerSrc(stickerOf(m.content).sticker)"
+              class="bubble-sticker"
+              alt=""
+            />
+            <template v-else-if="fileOf(m.content)">
               <el-image
                 v-if="fileOf(m.content).kind === 'image'"
                 :src="imageUrl(fileOf(m.content).file_id)"
@@ -357,6 +392,23 @@ function onKeydown(e) {
         ></textarea>
         <div class="send-row">
           <div class="tools">
+            <el-popover trigger="click" :width="280" placement="top">
+              <template #reference>
+                <el-button class="tool-btn emoji-btn" text>😀</el-button>
+              </template>
+              <div class="sticker-panel">
+                <img
+                  v-for="s in stickers"
+                  :key="s"
+                  :src="stickerSrc(s)"
+                  class="sticker-item"
+                  @click="sendSticker(s)"
+                />
+                <div v-if="!stickers.length" class="sticker-empty">
+                  暂无表情，把图片放到 public/stickers/ 并在 index.json 列出
+                </div>
+              </div>
+            </el-popover>
             <el-button
               class="tool-btn"
               text
@@ -686,6 +738,38 @@ function onKeydown(e) {
   border-radius: 5px;
   cursor: pointer;
   display: block;
+}
+.bubble-sticker {
+  width: 100px;
+  height: 100px;
+  object-fit: contain;
+  display: block;
+}
+.emoji-btn {
+  font-size: 17px;
+}
+.sticker-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-height: 220px;
+  overflow-y: auto;
+}
+.sticker-item {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  border-radius: 4px;
+  cursor: pointer;
+}
+.sticker-item:hover {
+  background: var(--wx-list-hover);
+}
+.sticker-empty {
+  font-size: 12px;
+  color: var(--wx-text-sub);
+  padding: 16px 8px;
+  text-align: center;
 }
 .file-card {
   display: flex;
