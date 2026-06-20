@@ -3,6 +3,7 @@ package service
 import (
 	"IM/model"
 	"context"
+	"encoding/json"
 	"testing"
 )
 
@@ -75,5 +76,53 @@ func TestAcceptFriendRequestEstablishesBidirectional(t *testing.T) {
 	if inserted == nil || inserted.Uid != "b" || inserted.FriendUid != "a" ||
 		inserted.Status != model.FriendStatusAccepted {
 		t.Errorf("reverse accepted relation wrong: %+v", inserted)
+	}
+}
+
+func TestSendFriendRequestNotifiesTarget(t *testing.T) {
+	origIns := insertFriend
+	defer func() { insertFriend = origIns; SetNotifier(nil) }()
+	insertFriend = func(ctx context.Context, f *model.FriendRelation) error { return nil }
+
+	var gotUid string
+	var gotPayload map[string]any
+	SetNotifier(func(toUid string, payload []byte) {
+		gotUid = toUid
+		_ = json.Unmarshal(payload, &gotPayload)
+	})
+
+	if err := SendFriendRequest(context.Background(), "a", "b", "hi bob"); err != nil {
+		t.Fatal(err)
+	}
+	if gotUid != "b" {
+		t.Errorf("notify target = %s, want b", gotUid)
+	}
+	if gotPayload["event"] != "friend_request" || gotPayload["from_uid"] != "a" || gotPayload["remark"] != "hi bob" {
+		t.Errorf("unexpected notify payload: %+v", gotPayload)
+	}
+}
+
+func TestAcceptFriendRequestNotifiesRequester(t *testing.T) {
+	origUpd := updateFriendStatus
+	origIns := insertFriend
+	defer func() { updateFriendStatus = origUpd; insertFriend = origIns; SetNotifier(nil) }()
+	updateFriendStatus = func(ctx context.Context, uid, friendUid string, status byte) error { return nil }
+	insertFriend = func(ctx context.Context, f *model.FriendRelation) error { return nil }
+
+	var gotUid string
+	var gotPayload map[string]any
+	SetNotifier(func(toUid string, payload []byte) {
+		gotUid = toUid
+		_ = json.Unmarshal(payload, &gotPayload)
+	})
+
+	if err := AcceptFriendRequest(context.Background(), "b", "a"); err != nil {
+		t.Fatal(err)
+	}
+	if gotUid != "a" {
+		t.Errorf("notify target = %s, want a (requester)", gotUid)
+	}
+	if gotPayload["event"] != "friend_accepted" || gotPayload["from_uid"] != "b" {
+		t.Errorf("unexpected notify payload: %+v", gotPayload)
 	}
 }

@@ -206,6 +206,12 @@ func (s *ChatService) dispatch(t byte, key uint32, body []byte) {
 		if err := json.Unmarshal(body, &m); err == nil {
 			s.emit("im:offline", m)
 		}
+	case msgJson:
+		// 服务端推送的系统通知（如好友申请/接受），body 为 {event, ...}。
+		var n map[string]any
+		if err := json.Unmarshal(body, &n); err == nil {
+			s.emit("im:notify", n)
+		}
 	case msgHeartBeat:
 		// 心跳，忽略。
 	default:

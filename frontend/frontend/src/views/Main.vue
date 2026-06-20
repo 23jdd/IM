@@ -1,7 +1,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage, ElMessageBox } from 'element-plus'
+import { ElMessage, ElMessageBox, ElNotification } from 'element-plus'
 import SideNav from '../components/SideNav.vue'
 import ConversationList from '../components/ConversationList.vue'
 import ContactsPanel from '../components/ContactsPanel.vue'
@@ -35,6 +35,36 @@ function bindEvents() {
   unsubs.push(onEvent(EVT.OFFLINE, (d) => chat.receiveOffline(d || {})))
   unsubs.push(onEvent(EVT.ACK, (d) => chat.markStatus(Number(d?.key), 'sent')))
   unsubs.push(onEvent(EVT.NACK, (d) => chat.markStatus(Number(d?.key), 'failed')))
+  unsubs.push(onEvent(EVT.NOTIFY, (d) => handleNotify(d)))
+}
+
+async function handleNotify(d) {
+  if (!d || !d.event) return
+  if (d.event === 'friend_request') {
+    try {
+      const reqs = await api.friendRequests(user.token)
+      chat.setFriendRequests(reqs || [])
+    } catch (e) {
+      /* ignore */
+    }
+    ElNotification({
+      title: '新的朋友',
+      message: `${d.from_uid || ''} 请求添加你为好友`,
+      type: 'info',
+    })
+  } else if (d.event === 'friend_accepted') {
+    try {
+      const friends = await api.getFriends(user.token)
+      chat.setFriends(friends || [])
+    } catch (e) {
+      /* ignore */
+    }
+    ElNotification({
+      title: '好友',
+      message: `${d.from_uid || ''} 接受了你的好友申请`,
+      type: 'success',
+    })
+  }
 }
 
 async function connectFlow() {

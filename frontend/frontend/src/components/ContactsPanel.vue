@@ -21,11 +21,11 @@ const contacts = computed(() =>
   [...chat.friends].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
 )
 
-const requests = ref([])
+const requests = computed(() => chat.friendRequests)
 
 async function loadRequests() {
   try {
-    requests.value = (await api.friendRequests(user.token)) || []
+    chat.setFriendRequests((await api.friendRequests(user.token)) || [])
   } catch {
     /* ignore */
   }
@@ -79,7 +79,7 @@ async function openRequests() {
 async function accept(req) {
   try {
     await api.friendAccept(user.token, req.uid)
-    requests.value = requests.value.filter((r) => r.uid !== req.uid)
+    chat.setFriendRequests(chat.friendRequests.filter((r) => r.uid !== req.uid))
     await refreshFriends()
     ElMessage.success('已添加为好友')
   } catch (e) {

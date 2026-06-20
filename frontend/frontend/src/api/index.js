@@ -57,4 +57,5 @@ export const EVT = {
   OFFLINE: 'im:offline',
   ACK: 'im:ack',
   NACK: 'im:nack',
+  NOTIFY: 'im:notify',
 }

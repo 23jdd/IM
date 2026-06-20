@@ -21,6 +21,7 @@ export const useChatStore = defineStore('chat', {
     connected: false,
     friends: [], // {uid, name, avatar}
     avatarCache: {}, // uid -> dataUrl ('' 表示无头像)
+    friendRequests: [], // 收到的好友申请
   }),
 
   getters: {
@@ -44,6 +45,10 @@ export const useChatStore = defineStore('chat', {
 
     setAvatarCache(uid, url) {
       if (uid) this.avatarCache[uid] = url || ''
+    },
+
+    setFriendRequests(list) {
+      this.friendRequests = list || []
     },
 
     setFriends(list) {
@@ -205,6 +210,7 @@ export const useChatStore = defineStore('chat', {
       this.connected = false
       this.friends = []
       this.avatarCache = {}
+      this.friendRequests = []
     },
   },
 })

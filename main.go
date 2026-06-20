@@ -9,7 +9,9 @@ import (
 	"IM/mysql"
 	"IM/rabbitmq"
 	"IM/redis"
+	"IM/service"
 	"IM/tcp"
+	"IM/tcp/Message"
 	"IM/utils"
 	"context"
 	"fmt"
@@ -81,6 +83,12 @@ func main() {
 	} else {
 		server.SetPresence(tcp.NewMemoryPresence())
 	}
+
+	// 让 HTTP/service 层能向在线用户实时推送通知（好友申请/接受等），
+	// 复用 TCP 的 RouteTo（自动支持本地投递与跨实例转发）。
+	service.SetNotifier(func(toUid string, payload []byte) {
+		_ = server.RouteTo(toUid, Message.NewMessage(Message.Json, 0, payload))
+	})
 
 	go server.Start()
 

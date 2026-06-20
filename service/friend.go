@@ -31,6 +31,7 @@ func SendFriendRequest(ctx context.Context, requester, target, remark string) er
 	}); err != nil {
 		return fmt.Errorf("insert friend request: %w", err)
 	}
+	notify(target, "friend_request", map[string]any{"from_uid": requester, "remark": remark})
 	return nil
 }
 
@@ -46,6 +47,7 @@ func AcceptFriendRequest(ctx context.Context, accepter, requester string) error 
 		Status:    model.FriendStatusAccepted,
 		CreatedAt: time.Now(),
 	})
+	notify(requester, "friend_accepted", map[string]any{"from_uid": accepter})
 	return nil
 }
 
