@@ -15,11 +15,17 @@ export const api = {
     AuthService.ChangePassword(token, oldPwd, newPwd),
   getFriends: (token) => AuthService.GetFriends(token),
   getConversations: (token) => AuthService.GetConversations(token),
+  groupCreate: (token, name, description) =>
+    AuthService.GroupCreate(token, name, description),
+  groupList: (token) => AuthService.GroupList(token),
+  groupJoin: (token, groupId) => AuthService.GroupJoin(token, groupId),
+  groupMembers: (token, groupId) => AuthService.GroupMembers(token, groupId),
 
   // ---- TCP 实时 (ChatService) ----
   connect: () => ChatService.Connect(TCP_ADDR),
   authTcp: (token) => ChatService.Auth(token),
   sendText: (toUid, content) => ChatService.SendText(toUid, content),
+  sendGroupText: (groupId, content) => ChatService.SendGroupText(groupId, content),
   sync: () => ChatService.Sync(),
   disconnect: () => ChatService.Disconnect(),
 }

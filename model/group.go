@@ -32,3 +32,9 @@ type GroupMember struct {
 	MuteUntil *time.Time `db:"mute_until" json:"mute_until,omitempty"`
 	JoinedAt  time.Time  `db:"joined_at" json:"joined_at"`
 }
+
+// GroupBrief 是"我的群聊"列表项。
+type GroupBrief struct {
+	GroupId string `db:"group_id" json:"group_id"`
+	Name    string `db:"name" json:"name"`
+}

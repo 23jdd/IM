@@ -74,3 +74,16 @@ func UpdateGroupMemberRole(ctx context.Context, groupId, uid string, role byte) 
 	_, err := groupConn.ExecCtx(ctx, query, role, groupId, uid)
 	return err
 }
+
+// FindUserGroupsWithInfo 返回用户加入的群（含群名）。
+func FindUserGroupsWithInfo(ctx context.Context, uid string) ([]*model.GroupBrief, error) {
+	query := `SELECT g.group_id, g.name
+	           FROM group_member m JOIN group_info g ON m.group_id = g.group_id
+	           WHERE m.uid = ? AND g.status = ?`
+	var items []*model.GroupBrief
+	err := groupConn.QueryRowsCtx(ctx, &items, query, uid, model.GroupStatusNormal)
+	if err != nil {
+		return nil, err
+	}
+	return items, nil
+}

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 )
 
@@ -183,6 +184,55 @@ type ConversationInfo struct {
 func (a *AuthService) GetConversations(token string) ([]ConversationInfo, error) {
 	var out []ConversationInfo
 	if err := a.do(http.MethodGet, "/api/conversation/list", token, nil, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+type GroupBrief struct {
+	GroupId string `json:"group_id"`
+	Name    string `json:"name"`
+}
+
+// GroupCreate 创建群组（创建者自动成为群主成员）。
+func (a *AuthService) GroupCreate(token, name, description string) (*GroupBrief, error) {
+	var out GroupBrief
+	if err := a.do(http.MethodPost, "/api/group/create", token, map[string]string{
+		"name":        name,
+		"description": description,
+	}, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// GroupList 获取我加入的群列表。
+func (a *AuthService) GroupList(token string) ([]GroupBrief, error) {
+	var out []GroupBrief
+	if err := a.do(http.MethodGet, "/api/group/list", token, nil, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// GroupJoin 加入群组。
+func (a *AuthService) GroupJoin(token, groupId string) error {
+	return a.do(http.MethodPost, "/api/group/join", token, map[string]string{
+		"group_id": groupId,
+	}, nil)
+}
+
+type GroupMemberInfo struct {
+	Uid      string `json:"uid"`
+	Role     int    `json:"role"`
+	Nickname string `json:"nickname"`
+}
+
+// GroupMembers 获取群成员列表。
+func (a *AuthService) GroupMembers(token, groupId string) ([]GroupMemberInfo, error) {
+	var out []GroupMemberInfo
+	path := "/api/group/members?group_id=" + url.QueryEscape(groupId)
+	if err := a.do(http.MethodGet, path, token, nil, &out); err != nil {
 		return nil, err
 	}
 	return out, nil

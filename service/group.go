@@ -11,6 +11,13 @@ import (
 	"time"
 )
 
+// 通过函数变量注入，便于群组逻辑的单元测试（不依赖真实 DB）。
+var (
+	insertGroup            = mysql.InsertGroup
+	insertGroupMember      = mysql.InsertGroupMember
+	findUserGroupsWithInfo = mysql.FindUserGroupsWithInfo
+)
+
 func CreateGroup(ctx context.Context, ownerUid, name, description string) (*model.GroupInfo, error) {
 	groupId := strconv.FormatUint(utils.GenerateId(), 10)
 	now := time.Now()
@@ -26,7 +33,7 @@ func CreateGroup(ctx context.Context, ownerUid, name, description string) (*mode
 		UpdatedAt:   now,
 	}
 
-	if err := mysql.InsertGroup(ctx, g); err != nil {
+	if err := insertGroup(ctx, g); err != nil {
 		return nil, fmt.Errorf("insert group: %w", err)
 	}
 
@@ -36,7 +43,7 @@ func CreateGroup(ctx context.Context, ownerUid, name, description string) (*mode
 		Role:     model.GroupRoleOwner,
 		JoinedAt: now,
 	}
-	if err := mysql.InsertGroupMember(ctx, m); err != nil {
+	if err := insertGroupMember(ctx, m); err != nil {
 		return nil, fmt.Errorf("insert member: %w", err)
 	}
 
@@ -74,4 +81,9 @@ func GetGroupMembers(ctx context.Context, groupId string) ([]*model.GroupMember,
 
 func GetUserGroups(ctx context.Context, uid string) ([]*model.GroupMember, error) {
 	return mysql.FindUserGroups(ctx, uid)
+}
+
+// GetUserGroupList 返回用户加入的群（含群名），供"我的群聊"列表展示。
+func GetUserGroupList(ctx context.Context, uid string) ([]*model.GroupBrief, error) {
+	return findUserGroupsWithInfo(ctx, uid)
 }

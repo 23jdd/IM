@@ -67,16 +67,32 @@ export const useChatStore = defineStore('chat', {
       }
     },
 
-    ensureConversation(uid, name) {
+    ensureConversation(uid, name, isGroup) {
       let conv = this.conversations.find((c) => c.uid === uid)
       if (!conv) {
-        conv = { uid, name: name || uid, avatar: '', last: '', time: 0, unread: 0 }
+        conv = {
+          uid,
+          name: name || uid,
+          avatar: '',
+          last: '',
+          time: 0,
+          unread: 0,
+          isGroup: !!isGroup,
+        }
         this.conversations.push(conv)
         this.messages[uid] = this.messages[uid] || []
-      } else if (name && conv.name === conv.uid) {
-        conv.name = name
+      } else {
+        if (name && conv.name === conv.uid) conv.name = name
+        if (isGroup) conv.isGroup = true
       }
       return conv
+    },
+
+    loadGroups(list) {
+      for (const g of list || []) {
+        if (!g.group_id) continue
+        this.ensureConversation(g.group_id, g.name || '群聊', true)
+      }
     },
 
     setActive(uid) {
@@ -121,22 +137,35 @@ export const useChatStore = defineStore('chat', {
       }
     },
 
-    // 实时收到的文本：后端实时帧已携带发送者（from_uid），按其归属；
-    // 旧格式或缺失时回退到当前会话。
+    // 实时收到的文本：单聊按 from_uid 归属；群聊按 group_id 归属。
     receiveText(payload) {
       const content = (payload && payload.content) || ''
       const from = (payload && payload.from_uid) || ''
-      const uid = from || this.activeUid || '__unknown__'
+      const groupId = (payload && payload.group_id) || ''
+      let uid
+      let self
+      if (groupId) {
+        uid = groupId
+        self = from === this.selfUid
+      } else {
+        uid = from || this.activeUid || '__unknown__'
+        self = false
+      }
       const time = Date.now()
-      this.ensureConversation(uid, uid === '__unknown__' ? '新消息' : undefined)
+      const placeholderName = groupId
+        ? '群聊 ' + groupId
+        : uid === '__unknown__'
+        ? '新消息'
+        : undefined
+      this.ensureConversation(uid, placeholderName, !!groupId)
       this._push(uid, {
         id: (payload && payload.msg_id) || nextId(),
         content,
         time,
-        self: false,
-        status: 'recv',
+        self,
+        status: self ? 'sent' : 'recv',
       })
-      this._touch(uid, content, time, true)
+      this._touch(uid, content, time, !self)
     },
 
     // 离线同步的消息：含 from_uid / to_uid，可正确归属。

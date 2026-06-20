@@ -97,6 +97,83 @@ export class FriendInfo {
     }
 }
 
+export class GroupBrief {
+    /**
+     * Creates a new GroupBrief instance.
+     * @param {Partial<GroupBrief>} [$$source = {}] - The source object to create the GroupBrief.
+     */
+    constructor($$source = {}) {
+        if (!("group_id" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["group_id"] = "";
+        }
+        if (!("name" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["name"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GroupBrief instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {GroupBrief}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new GroupBrief(/** @type {Partial<GroupBrief>} */($$parsedSource));
+    }
+}
+
+export class GroupMemberInfo {
+    /**
+     * Creates a new GroupMemberInfo instance.
+     * @param {Partial<GroupMemberInfo>} [$$source = {}] - The source object to create the GroupMemberInfo.
+     */
+    constructor($$source = {}) {
+        if (!("uid" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["uid"] = "";
+        }
+        if (!("role" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["role"] = 0;
+        }
+        if (!("nickname" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["nickname"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GroupMemberInfo instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {GroupMemberInfo}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new GroupMemberInfo(/** @type {Partial<GroupMemberInfo>} */($$parsedSource));
+    }
+}
+
 export class LoginResult {
     /**
      * Creates a new LoginResult instance.

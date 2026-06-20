@@ -9,30 +9,46 @@ import (
 	"time"
 )
 
-// 通过函数变量注入，便于离线投递逻辑的单元测试（不依赖真实 DB）。
+// 通过函数变量注入，便于离线投递 / 群聊扇出逻辑的单元测试（不依赖真实 DB）。
 var (
 	getOfflineMessages = service.GetOfflineMessages
 	markMessagesRead   = service.MarkMessagesRead
+	getGroupMembers    = service.GetGroupMembers
+	sendGroupMessage   = service.SendGroupMessage
 )
 
 type TextChatPayload struct {
 	ToUid   string `json:"to_uid"`
+	GroupId string `json:"group_id"`
 	Content string `json:"content"`
 }
 
 // RealtimeTextPayload 是服务端路由给接收方的实时文本帧体，携带发送者信息，
-// 使接收端能正确归属消息（修复"实时帧丢失 from_uid"问题）。
+// 使接收端能正确归属消息（修复"实时帧丢失 from_uid"问题）。群聊时带 group_id。
 type RealtimeTextPayload struct {
 	FromUid   string    `json:"from_uid"`
+	GroupId   string    `json:"group_id,omitempty"`
 	MsgId     string    `json:"msg_id"`
 	Content   string    `json:"content"`
 	CreatedAt time.Time `json:"created_at"`
 }
 
-// BuildRealtimeText 构造实时文本帧体（JSON）。
+// BuildRealtimeText 构造单聊实时文本帧体（JSON）。
 func BuildRealtimeText(fromUid, msgId, content string, createdAt time.Time) []byte {
 	data, _ := json.Marshal(RealtimeTextPayload{
 		FromUid:   fromUid,
+		MsgId:     msgId,
+		Content:   content,
+		CreatedAt: createdAt,
+	})
+	return data
+}
+
+// BuildGroupText 构造群聊实时文本帧体（带 group_id）。
+func BuildGroupText(fromUid, groupId, msgId, content string, createdAt time.Time) []byte {
+	data, _ := json.Marshal(RealtimeTextPayload{
+		FromUid:   fromUid,
+		GroupId:   groupId,
 		MsgId:     msgId,
 		Content:   content,
 		CreatedAt: createdAt,
@@ -47,7 +63,17 @@ func ChatMessageHandler(m *Message.Message, c *Client) {
 		return
 	}
 
-	if payload.ToUid == "" || payload.Content == "" {
+	if payload.Content == "" {
+		return
+	}
+
+	// 群聊：群成员扇出
+	if payload.GroupId != "" {
+		handleGroupMessage(m, c, payload)
+		return
+	}
+
+	if payload.ToUid == "" {
 		return
 	}
 
@@ -68,6 +94,39 @@ func ChatMessageHandler(m *Message.Message, c *Client) {
 	))
 	if err != nil {
 		log.Printf("chat: route to %s failed (offline): %v", payload.ToUid, err)
+	}
+}
+
+// handleGroupMessage 处理群聊：持久化群消息并扇出给所有在线群成员（跳过发送者）。
+func handleGroupMessage(m *Message.Message, c *Client, payload TextChatPayload) {
+	c.finished = true // 已消费，短路 Echo
+	ctx := context.Background()
+
+	members, err := getGroupMembers(ctx, payload.GroupId)
+	if err != nil {
+		log.Println("group: members query failed:", err)
+		c.SendNack(m.GetKey())
+		return
+	}
+
+	msg, err := sendGroupMessage(ctx, c.UID(), payload.GroupId, Message.Text, payload.Content)
+	if err != nil {
+		log.Println("group: save message failed:", err)
+		c.SendNack(m.GetKey())
+		return
+	}
+
+	c.SendAck(m.GetKey())
+
+	frame := Message.NewMessage(Message.Text, 0,
+		BuildGroupText(c.UID(), payload.GroupId, msg.MsgId, msg.Content, msg.CreatedAt))
+	for _, mem := range members {
+		if mem.Uid == c.UID() {
+			continue
+		}
+		if err := c.server.RouteTo(mem.Uid, frame); err != nil {
+			log.Printf("group: route to %s failed (offline): %v", mem.Uid, err)
+		}
 	}
 }
 

@@ -12,6 +12,8 @@ export {
 export {
     ConversationInfo,
     FriendInfo,
+    GroupBrief,
+    GroupMemberInfo,
     LoginResult,
     Profile,
     RegisterResult

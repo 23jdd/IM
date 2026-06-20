@@ -6,13 +6,23 @@ import { avatarColor, avatarText } from '../utils/format'
 const chat = useChatStore()
 const emit = defineEmits(['open-chat'])
 
+const groups = computed(() =>
+  chat.conversations
+    .filter((c) => c.isGroup)
+    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+)
+
 const contacts = computed(() =>
   [...chat.friends].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
 )
 
-function open(c) {
+function openFriend(c) {
   chat.ensureConversation(c.uid, c.name)
   emit('open-chat', c.uid)
+}
+
+function openGroup(g) {
+  emit('open-chat', g.uid)
 }
 </script>
 
@@ -20,7 +30,20 @@ function open(c) {
   <div class="contacts">
     <div class="head">通讯录</div>
     <div class="list">
-      <div v-for="c in contacts" :key="c.uid" class="item" @click="open(c)">
+      <div class="section-title">我的群聊 ({{ groups.length }})</div>
+      <div v-for="g in groups" :key="g.uid" class="item" @click="openGroup(g)">
+        <div class="avatar" :style="{ background: avatarColor(g.uid) }">
+          {{ avatarText(g.name) }}
+        </div>
+        <div class="info">
+          <div class="name">{{ g.name }}</div>
+          <div class="uid">群号: {{ g.uid }}</div>
+        </div>
+      </div>
+      <div v-if="!groups.length" class="empty-line">暂无群聊</div>
+
+      <div class="section-title">好友 ({{ contacts.length }})</div>
+      <div v-for="c in contacts" :key="c.uid" class="item" @click="openFriend(c)">
         <div class="avatar" :style="{ background: avatarColor(c.uid) }">
           {{ avatarText(c.name) }}
         </div>
@@ -29,9 +52,7 @@ function open(c) {
           <div class="uid">UID: {{ c.uid }}</div>
         </div>
       </div>
-      <div v-if="!contacts.length" class="empty">
-        暂无好友
-      </div>
+      <div v-if="!contacts.length" class="empty-line">暂无好友</div>
     </div>
   </div>
 </template>
@@ -54,6 +75,12 @@ function open(c) {
 .list {
   flex: 1;
   overflow-y: auto;
+}
+.section-title {
+  font-size: 12px;
+  color: var(--wx-text-sub);
+  padding: 10px 14px 4px;
+  background: var(--wx-list-bg);
 }
 .item {
   display: flex;
@@ -83,10 +110,9 @@ function open(c) {
   color: var(--wx-text-sub);
   margin-top: 2px;
 }
-.empty {
-  text-align: center;
+.empty-line {
   color: var(--wx-text-sub);
   font-size: 12px;
-  padding: 40px 16px;
+  padding: 8px 16px;
 }
 </style>

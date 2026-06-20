@@ -49,6 +49,37 @@ func SendChatMessage(ctx context.Context, fromUid, toUid string, msgType byte, c
 	return msg, nil
 }
 
+// SendGroupMessage 持久化一条群消息（带 group_id），并 best-effort 归档。
+func SendGroupMessage(ctx context.Context, fromUid, groupId string, msgType byte, content string) (*model.ChatMessage, error) {
+	msg := &model.ChatMessage{
+		MsgId:     strconv.FormatUint(utils.GenerateId(), 10),
+		FromUid:   fromUid,
+		GroupId:   groupId,
+		MsgType:   msgType,
+		Content:   content,
+		Status:    model.MsgStatusUnread,
+		CreatedAt: time.Now(),
+	}
+
+	if err := insertChatMessage(ctx, msg); err != nil {
+		return nil, err
+	}
+
+	if err := publishChatEvent(ctx, &rabbitmq.MessageEvent{
+		MsgId:     msg.MsgId,
+		FromUid:   msg.FromUid,
+		ToUid:     msg.ToUid,
+		GroupId:   msg.GroupId,
+		MsgType:   msg.MsgType,
+		Content:   msg.Content,
+		CreatedAt: msg.CreatedAt,
+	}); err != nil {
+		log.Printf("archive publish failed for group msg %s: %v", msg.MsgId, err)
+	}
+
+	return msg, nil
+}
+
 func GetOfflineMessages(ctx context.Context, uid string) ([]*model.ChatMessage, error) {
 	return mysql.FindOfflineMessages(ctx, uid)
 }

@@ -3,9 +3,12 @@ import { ref, computed } from 'vue'
 import { Search, Plus } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { useChatStore } from '../store/chat'
+import { useUserStore } from '../store/user'
+import { api } from '../api'
 import { formatTime, avatarColor, avatarText } from '../utils/format'
 
 const chat = useChatStore()
+const user = useUserStore()
 const keyword = ref('')
 
 const list = computed(() => {
@@ -20,22 +23,72 @@ const list = computed(() => {
 })
 
 const dialogVisible = ref(false)
-const newChat = ref({ uid: '', name: '' })
+const mode = ref('single') // 'single' | 'create' | 'join'
+const loading = ref(false)
+const form = ref({ uid: '', name: '', groupName: '', desc: '', groupId: '' })
 
-function openNew() {
-  newChat.value = { uid: '', name: '' }
+const dialogTitle = computed(() =>
+  mode.value === 'single' ? '发起单聊' : mode.value === 'create' ? '创建群聊' : '加入群聊'
+)
+
+function openDialog(m) {
+  mode.value = m
+  form.value = { uid: '', name: '', groupName: '', desc: '', groupId: '' }
   dialogVisible.value = true
 }
 
-function confirmNew() {
-  const uid = newChat.value.uid.trim()
-  if (!uid) {
-    ElMessage.warning('请输入对方账号(UID)')
+async function confirm() {
+  if (mode.value === 'single') {
+    const uid = form.value.uid.trim()
+    if (!uid) {
+      ElMessage.warning('请输入对方账号(UID)')
+      return
+    }
+    chat.ensureConversation(uid, form.value.name.trim() || uid)
+    chat.setActive(uid)
+    dialogVisible.value = false
     return
   }
-  chat.ensureConversation(uid, newChat.value.name.trim() || uid)
-  chat.setActive(uid)
-  dialogVisible.value = false
+
+  if (mode.value === 'create') {
+    const name = form.value.groupName.trim()
+    if (!name) {
+      ElMessage.warning('请输入群名称')
+      return
+    }
+    loading.value = true
+    try {
+      const g = await api.groupCreate(user.token, name, form.value.desc.trim())
+      chat.ensureConversation(g.group_id, g.name, true)
+      chat.setActive(g.group_id)
+      ElMessage.success('群创建成功，群号：' + g.group_id)
+      dialogVisible.value = false
+    } catch (e) {
+      ElMessage.error(String(e?.message || e))
+    } finally {
+      loading.value = false
+    }
+    return
+  }
+
+  // join
+  const gid = form.value.groupId.trim()
+  if (!gid) {
+    ElMessage.warning('请输入群号')
+    return
+  }
+  loading.value = true
+  try {
+    await api.groupJoin(user.token, gid)
+    chat.ensureConversation(gid, '群聊 ' + gid, true)
+    chat.setActive(gid)
+    ElMessage.success('已加入群聊')
+    dialogVisible.value = false
+  } catch (e) {
+    ElMessage.error(String(e?.message || e))
+  } finally {
+    loading.value = false
+  }
 }
 
 function select(uid) {
@@ -53,7 +106,16 @@ function select(uid) {
         :prefix-icon="Search"
         clearable
       />
-      <el-button class="add-btn" :icon="Plus" circle @click="openNew" title="发起聊天" />
+      <el-dropdown trigger="click" @command="openDialog">
+        <el-button class="add-btn" :icon="Plus" circle title="新建" />
+        <template #dropdown>
+          <el-dropdown-menu>
+            <el-dropdown-item command="single">发起单聊</el-dropdown-item>
+            <el-dropdown-item command="create">创建群聊</el-dropdown-item>
+            <el-dropdown-item command="join">加入群聊</el-dropdown-item>
+          </el-dropdown-menu>
+        </template>
+      </el-dropdown>
     </div>
 
     <div class="items">
@@ -71,28 +133,49 @@ function select(uid) {
         </el-badge>
         <div class="meta">
           <div class="row1">
-            <span class="name">{{ c.name }}</span>
+            <span class="name">
+              <span v-if="c.isGroup" class="tag">群</span>{{ c.name }}
+            </span>
             <span class="time">{{ formatTime(c.time) }}</span>
           </div>
           <div class="last">{{ c.last }}</div>
         </div>
       </div>
 
-      <div v-if="!list.length" class="empty">暂无会话，点击右上角发起聊天</div>
+      <div v-if="!list.length" class="empty">暂无会话，点击右上角新建</div>
     </div>
 
-    <el-dialog v-model="dialogVisible" title="发起聊天" width="320px" align-center>
+    <el-dialog v-model="dialogVisible" :title="dialogTitle" width="320px" align-center>
       <el-form label-position="top">
-        <el-form-item label="对方账号 (UID)">
-          <el-input v-model="newChat.uid" placeholder="请输入对方 UID" />
-        </el-form-item>
-        <el-form-item label="备注名 (可选)">
-          <el-input v-model="newChat.name" placeholder="备注名" />
-        </el-form-item>
+        <template v-if="mode === 'single'">
+          <el-form-item label="对方账号 (UID)">
+            <el-input v-model="form.uid" placeholder="请输入对方 UID" />
+          </el-form-item>
+          <el-form-item label="备注名 (可选)">
+            <el-input v-model="form.name" placeholder="备注名" />
+          </el-form-item>
+        </template>
+
+        <template v-else-if="mode === 'create'">
+          <el-form-item label="群名称">
+            <el-input v-model="form.groupName" placeholder="请输入群名称" />
+          </el-form-item>
+          <el-form-item label="群简介 (可选)">
+            <el-input v-model="form.desc" placeholder="群简介" />
+          </el-form-item>
+        </template>
+
+        <template v-else>
+          <el-form-item label="群号">
+            <el-input v-model="form.groupId" placeholder="请输入群号" />
+          </el-form-item>
+        </template>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
-        <el-button type="primary" color="#07c160" @click="confirmNew">确定</el-button>
+        <el-button type="primary" color="#07c160" :loading="loading" @click="confirm">
+          确定
+        </el-button>
       </template>
     </el-dialog>
   </div>
@@ -156,6 +239,16 @@ function select(uid) {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.tag {
+  display: inline-block;
+  font-size: 10px;
+  color: #fff;
+  background: var(--wx-green);
+  border-radius: 2px;
+  padding: 0 3px;
+  margin-right: 4px;
+  vertical-align: middle;
 }
 .time {
   font-size: 11px;

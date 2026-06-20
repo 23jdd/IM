@@ -118,6 +118,19 @@ func (s *ChatService) SendText(toUid, content string) (uint32, error) {
 	return key, nil
 }
 
+// SendGroupText 发送群聊文本消息，body 为 {group_id, content} 的 JSON。
+func (s *ChatService) SendGroupText(groupId, content string) (uint32, error) {
+	payload, _ := json.Marshal(map[string]string{
+		"group_id": groupId,
+		"content":  content,
+	})
+	key := s.nextKey()
+	if err := s.write(msgText, key, payload); err != nil {
+		return 0, err
+	}
+	return key, nil
+}
+
 // Sync 触发离线消息同步（发送 Json 帧）。
 func (s *ChatService) Sync() error {
 	return s.write(msgJson, s.nextKey(), []byte("{}"))
@@ -160,10 +173,11 @@ func (s *ChatService) dispatch(t byte, key uint32, body []byte) {
 	case msgNack:
 		s.emit("im:nack", map[string]any{"key": key})
 	case msgText:
-		// 后端路由的实时文本帧 body 现为 JSON {from_uid, msg_id, content, created_at}。
+		// 后端路由的实时文本帧 body 为 JSON {from_uid, group_id?, msg_id, content}。
 		// 兼容旧格式：解析失败则按裸文本处理（from_uid 为空）。
 		var p struct {
 			FromUid string `json:"from_uid"`
+			GroupId string `json:"group_id"`
 			MsgId   string `json:"msg_id"`
 			Content string `json:"content"`
 		}
@@ -171,6 +185,7 @@ func (s *ChatService) dispatch(t byte, key uint32, body []byte) {
 			s.emit("im:text", map[string]any{
 				"key":      key,
 				"from_uid": p.FromUid,
+				"group_id": p.GroupId,
 				"msg_id":   p.MsgId,
 				"content":  p.Content,
 			})

@@ -37,6 +37,10 @@ func (s *Server) Start() {
 			auth.PUT("/user/password", User.ChangePassword)
 			auth.GET("/friend/list", User.GetFriends)
 			auth.GET("/conversation/list", User.GetConversations)
+			auth.POST("/group/create", User.CreateGroup)
+			auth.GET("/group/list", User.GetMyGroups)
+			auth.GET("/group/members", User.GetGroupMembers)
+			auth.POST("/group/join", User.JoinGroup)
 		}
 	}
 

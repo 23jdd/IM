@@ -1,6 +1,7 @@
 package gateway
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
@@ -84,11 +85,18 @@ func StartTCPProxy(listenAddr string, lb *LoadBalancer) error {
 	if err != nil {
 		return err
 	}
+	return serveProxy(listener, lb)
+}
 
+func serveProxy(listener net.Listener, lb *LoadBalancer) error {
 	for {
 		clientConn, err := listener.Accept()
 		if err != nil {
-			continue
+			// listener 关闭或致命错误时退出，避免原先 continue 导致的 CPU 忙等死循环。
+			if errors.Is(err, net.ErrClosed) {
+				return nil
+			}
+			return err
 		}
 
 		backend, err := lb.Pick()
@@ -98,8 +106,8 @@ func StartTCPProxy(listenAddr string, lb *LoadBalancer) error {
 		}
 
 		go func() {
-			backendConn, err := net.DialTimeout("tcp", backend.Addr, 5*time.Second)
-			if err != nil {
+			backendConn, derr := net.DialTimeout("tcp", backend.Addr, 5*time.Second)
+			if derr != nil {
 				clientConn.Close()
 				return
 			}

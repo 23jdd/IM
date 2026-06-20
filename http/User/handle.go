@@ -120,6 +120,64 @@ func GetConversations(c *gin.Context) {
 	ok(c, resp)
 }
 
+func CreateGroup(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		Name        string `json:"name" binding:"required"`
+		Description string `json:"description"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	g, err := service.CreateGroup(c.Request.Context(), uid, req.Name, req.Description)
+	if err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, gin.H{"group_id": g.GroupId, "name": g.Name})
+}
+
+func GetMyGroups(c *gin.Context) {
+	uid := c.GetString("uid")
+	resp, err := service.GetUserGroupList(c.Request.Context(), uid)
+	if err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, resp)
+}
+
+func GetGroupMembers(c *gin.Context) {
+	groupId := c.Query("group_id")
+	if groupId == "" {
+		fail(c, -1, "group_id required")
+		return
+	}
+	resp, err := service.GetGroupMembers(c.Request.Context(), groupId)
+	if err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, resp)
+}
+
+func JoinGroup(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		GroupId string `json:"group_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	if err := service.JoinGroup(c.Request.Context(), req.GroupId, uid); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, nil)
+}
+
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		auth := c.GetHeader("Authorization")

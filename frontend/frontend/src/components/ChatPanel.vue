@@ -16,6 +16,25 @@ const messages = computed(() => chat.activeMessages)
 const draft = ref('')
 const scroller = ref(null)
 
+const membersVisible = ref(false)
+const members = ref([])
+const loadingMembers = ref(false)
+const roleLabels = { 0: '成员', 1: '管理员', 2: '群主' }
+
+async function showMembers() {
+  const c = conv.value
+  if (!c) return
+  loadingMembers.value = true
+  try {
+    members.value = (await api.groupMembers(user.token, c.uid)) || []
+    membersVisible.value = true
+  } catch (e) {
+    ElMessage.error('获取成员失败：' + String(e?.message || e))
+  } finally {
+    loadingMembers.value = false
+  }
+}
+
 function scrollToBottom() {
   nextTick(() => {
     const el = scroller.value
@@ -40,7 +59,9 @@ async function send() {
   }
   draft.value = ''
   try {
-    const key = await api.sendText(c.uid, text)
+    const key = c.isGroup
+      ? await api.sendGroupText(c.uid, text)
+      : await api.sendText(c.uid, text)
     chat.addOutgoing(c.uid, text, Number(key))
     scrollToBottom()
   } catch (e) {
@@ -65,7 +86,18 @@ function onKeydown(e) {
 
     <template v-else>
       <div class="chat-header">
-        <span class="title">{{ conv.name }}</span>
+        <span class="title">
+          <span v-if="conv.isGroup" class="gtag">群</span>{{ conv.name }}
+        </span>
+        <el-button
+          v-if="conv.isGroup"
+          link
+          class="members-btn"
+          :loading="loadingMembers"
+          @click="showMembers"
+        >
+          成员
+        </el-button>
       </div>
 
       <div ref="scroller" class="messages selectable">
@@ -110,6 +142,20 @@ function onKeydown(e) {
           </el-button>
         </div>
       </div>
+
+      <el-dialog v-model="membersVisible" title="群成员" width="320px" align-center>
+        <div v-for="mem in members" :key="mem.uid" class="member-row">
+          <div class="member-avatar" :style="{ background: avatarColor(mem.uid) }">
+            {{ avatarText(mem.nickname || mem.uid) }}
+          </div>
+          <div class="member-info">
+            <div class="member-name">{{ mem.nickname || mem.uid }}</div>
+            <div class="member-uid">UID: {{ mem.uid }}</div>
+          </div>
+          <span class="member-role">{{ roleLabels[mem.role] || '成员' }}</span>
+        </div>
+        <div v-if="!members.length" class="member-empty">暂无成员</div>
+      </el-dialog>
     </template>
   </div>
 </template>
@@ -251,5 +297,55 @@ function onKeydown(e) {
 }
 .send-btn {
   color: #fff;
+}
+.gtag {
+  display: inline-block;
+  font-size: 11px;
+  color: #fff;
+  background: var(--wx-green);
+  border-radius: 2px;
+  padding: 0 4px;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+.members-btn {
+  margin-left: auto;
+}
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 2px;
+}
+.member-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 5px;
+  color: #fff;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.member-info {
+  flex: 1;
+  min-width: 0;
+}
+.member-name {
+  font-size: 14px;
+}
+.member-uid {
+  font-size: 11px;
+  color: var(--wx-text-sub);
+}
+.member-role {
+  font-size: 12px;
+  color: var(--wx-green);
+}
+.member-empty {
+  text-align: center;
+  color: var(--wx-text-sub);
+  font-size: 12px;
+  padding: 20px;
 }
 </style>

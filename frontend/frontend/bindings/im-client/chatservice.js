@@ -43,6 +43,16 @@ export function Disconnect() {
 }
 
 /**
+ * SendGroupText 发送群聊文本消息，body 为 {group_id, content} 的 JSON。
+ * @param {string} groupId
+ * @param {string} content
+ * @returns {$CancellablePromise<number>}
+ */
+export function SendGroupText(groupId, content) {
+    return $Call.ByID(1370575323, groupId, content);
+}
+
+/**
  * SendText 发送单聊文本消息，body 为 {to_uid, content} 的 JSON。
  * 返回本条消息的 key，前端可用其匹配后续的 ack/nack。
  * @param {string} toUid

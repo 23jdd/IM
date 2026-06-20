@@ -61,6 +61,52 @@ export function GetProfile(token) {
 }
 
 /**
+ * GroupCreate 创建群组（创建者自动成为群主成员）。
+ * @param {string} token
+ * @param {string} name
+ * @param {string} description
+ * @returns {$CancellablePromise<$models.GroupBrief | null>}
+ */
+export function GroupCreate(token, name, description) {
+    return $Call.ByID(390833698, token, name, description).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType7($result);
+    }));
+}
+
+/**
+ * GroupJoin 加入群组。
+ * @param {string} token
+ * @param {string} groupId
+ * @returns {$CancellablePromise<void>}
+ */
+export function GroupJoin(token, groupId) {
+    return $Call.ByID(1985800850, token, groupId);
+}
+
+/**
+ * GroupList 获取我加入的群列表。
+ * @param {string} token
+ * @returns {$CancellablePromise<$models.GroupBrief[]>}
+ */
+export function GroupList(token) {
+    return $Call.ByID(2313833298, token).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType8($result);
+    }));
+}
+
+/**
+ * GroupMembers 获取群成员列表。
+ * @param {string} token
+ * @param {string} groupId
+ * @returns {$CancellablePromise<$models.GroupMemberInfo[]>}
+ */
+export function GroupMembers(token, groupId) {
+    return $Call.ByID(943058937, token, groupId).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType10($result);
+    }));
+}
+
+/**
  * Login 使用 uid + 密码登录，返回 JWT token。
  * @param {string} uid
  * @param {string} password
@@ -68,7 +114,7 @@ export function GetProfile(token) {
  */
 export function Login(uid, password) {
     return $Call.ByID(655276660, uid, password).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType7($result);
+        return $$createType12($result);
     }));
 }
 
@@ -82,7 +128,7 @@ export function Login(uid, password) {
  */
 export function Register(name, password, email, phone) {
     return $Call.ByID(3233095442, name, password, email, phone).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType9($result);
+        return $$createType14($result);
     }));
 }
 
@@ -112,7 +158,12 @@ const $$createType2 = $models.FriendInfo.createFrom;
 const $$createType3 = $Create.Array($$createType2);
 const $$createType4 = $models.Profile.createFrom;
 const $$createType5 = $Create.Nullable($$createType4);
-const $$createType6 = $models.LoginResult.createFrom;
+const $$createType6 = $models.GroupBrief.createFrom;
 const $$createType7 = $Create.Nullable($$createType6);
-const $$createType8 = $models.RegisterResult.createFrom;
-const $$createType9 = $Create.Nullable($$createType8);
+const $$createType8 = $Create.Array($$createType6);
+const $$createType9 = $models.GroupMemberInfo.createFrom;
+const $$createType10 = $Create.Array($$createType9);
+const $$createType11 = $models.LoginResult.createFrom;
+const $$createType12 = $Create.Nullable($$createType11);
+const $$createType13 = $models.RegisterResult.createFrom;
+const $$createType14 = $Create.Nullable($$createType13);

@@ -55,6 +55,12 @@ async function loadInitialData() {
     /* 好友接口失败不阻断 */
   }
   try {
+    const groups = await api.groupList(user.token)
+    chat.loadGroups(groups || [])
+  } catch (e) {
+    /* 群列表失败不阻断 */
+  }
+  try {
     const convs = await api.getConversations(user.token)
     chat.loadConversations(convs || [])
   } catch (e) {
