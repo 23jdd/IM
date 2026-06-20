@@ -21,6 +21,7 @@ type Config struct {
 	LogLevel      string `yaml:"log_level"`
 	GatewayPort   int    `yaml:"gateway_port"`
 	BackendAddrs  []string `yaml:"backend_addrs"`
+	JWTSecret     string `yaml:"jwt_secret"`
 }
 
 func MustLoadConfig(configPath string) *Config {

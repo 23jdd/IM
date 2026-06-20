@@ -6,11 +6,32 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"time"
 )
 
 type TextChatPayload struct {
 	ToUid   string `json:"to_uid"`
 	Content string `json:"content"`
+}
+
+// RealtimeTextPayload 是服务端路由给接收方的实时文本帧体，携带发送者信息，
+// 使接收端能正确归属消息（修复"实时帧丢失 from_uid"问题）。
+type RealtimeTextPayload struct {
+	FromUid   string    `json:"from_uid"`
+	MsgId     string    `json:"msg_id"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"created_at"`
+}
+
+// BuildRealtimeText 构造实时文本帧体（JSON）。
+func BuildRealtimeText(fromUid, msgId, content string, createdAt time.Time) []byte {
+	data, _ := json.Marshal(RealtimeTextPayload{
+		FromUid:   fromUid,
+		MsgId:     msgId,
+		Content:   content,
+		CreatedAt: createdAt,
+	})
+	return data
 }
 
 func ChatMessageHandler(m *Message.Message, c *Client) {
@@ -36,7 +57,7 @@ func ChatMessageHandler(m *Message.Message, c *Client) {
 
 	err = c.server.RouteTo(payload.ToUid, Message.NewMessage(
 		Message.Text, 0,
-		[]byte(msg.Content),
+		BuildRealtimeText(c.UID(), msg.MsgId, msg.Content, msg.CreatedAt),
 	))
 	if err != nil {
 		log.Printf("chat: route to %s failed (offline): %v", payload.ToUid, err)

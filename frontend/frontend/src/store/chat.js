@@ -94,12 +94,21 @@ export const useChatStore = defineStore('chat', {
       }
     },
 
-    // 实时收到的文本：后端路由帧不含发送者，归入当前会话。
-    receiveText(content) {
-      const uid = this.activeUid || '__unknown__'
+    // 实时收到的文本：后端实时帧已携带发送者（from_uid），按其归属；
+    // 旧格式或缺失时回退到当前会话。
+    receiveText(payload) {
+      const content = (payload && payload.content) || ''
+      const from = (payload && payload.from_uid) || ''
+      const uid = from || this.activeUid || '__unknown__'
       const time = Date.now()
       this.ensureConversation(uid, uid === '__unknown__' ? '新消息' : undefined)
-      this._push(uid, { id: nextId(), content, time, self: false, status: 'recv' })
+      this._push(uid, {
+        id: (payload && payload.msg_id) || nextId(),
+        content,
+        time,
+        self: false,
+        status: 'recv',
+      })
       this._touch(uid, content, time, true)
     },
 

@@ -3,11 +3,15 @@ package rabbitmq
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
+
+// ErrNotInitialized 表示 RabbitMQ 尚未初始化（连接失败或未调用 InitRabbitMQ）。
+var ErrNotInitialized = errors.New("rabbitmq not initialized")
 
 var (
 	conn    *amqp.Connection
@@ -64,6 +68,9 @@ type MessageEvent struct {
 }
 
 func PublishMessage(ctx context.Context, event *MessageEvent) error {
+	if channel == nil {
+		return ErrNotInitialized
+	}
 	body, err := json.Marshal(event)
 	if err != nil {
 		return err
@@ -109,6 +116,9 @@ type NotificationEvent struct {
 }
 
 func PublishNotification(ctx context.Context, event *NotificationEvent) error {
+	if channel == nil {
+		return ErrNotInitialized
+	}
 	body, err := json.Marshal(event)
 	if err != nil {
 		return err

@@ -10,6 +10,7 @@ import (
 	"IM/rabbitmq"
 	"IM/redis"
 	"IM/tcp"
+	"IM/utils"
 	"context"
 	"fmt"
 	"time"
@@ -22,6 +23,8 @@ func main() {
 
 	log.InitLogger(config.LogPath, config.LogLevel)
 	defer log.CloseLogger()
+
+	utils.SetJWTSecret(config.JWTSecret)
 
 	log.Info("starting IM server")
 

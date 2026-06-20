@@ -30,7 +30,7 @@ function bindEvents() {
       }
     })
   )
-  unsubs.push(onEvent(EVT.TEXT, (d) => chat.receiveText(d?.content || '')))
+  unsubs.push(onEvent(EVT.TEXT, (d) => chat.receiveText(d || {})))
   unsubs.push(onEvent(EVT.OFFLINE, (d) => chat.receiveOffline(d || {})))
   unsubs.push(onEvent(EVT.ACK, (d) => chat.markStatus(Number(d?.key), 'sent')))
   unsubs.push(onEvent(EVT.NACK, (d) => chat.markStatus(Number(d?.key), 'failed')))

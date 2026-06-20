@@ -160,11 +160,27 @@ func (s *ChatService) dispatch(t byte, key uint32, body []byte) {
 	case msgNack:
 		s.emit("im:nack", map[string]any{"key": key})
 	case msgText:
-		// 后端路由的实时文本帧 body 仅为内容本身（无 from_uid）。
-		s.emit("im:text", map[string]any{
-			"key":     key,
-			"content": string(body),
-		})
+		// 后端路由的实时文本帧 body 现为 JSON {from_uid, msg_id, content, created_at}。
+		// 兼容旧格式：解析失败则按裸文本处理（from_uid 为空）。
+		var p struct {
+			FromUid string `json:"from_uid"`
+			MsgId   string `json:"msg_id"`
+			Content string `json:"content"`
+		}
+		if err := json.Unmarshal(body, &p); err == nil && (p.Content != "" || p.FromUid != "") {
+			s.emit("im:text", map[string]any{
+				"key":      key,
+				"from_uid": p.FromUid,
+				"msg_id":   p.MsgId,
+				"content":  p.Content,
+			})
+		} else {
+			s.emit("im:text", map[string]any{
+				"key":      key,
+				"from_uid": "",
+				"content":  string(body),
+			})
+		}
 	case msgBlob:
 		// 离线同步：每个 blob 为一条 ChatMessage 的 JSON。
 		var m map[string]any
