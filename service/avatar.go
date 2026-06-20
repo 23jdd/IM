@@ -27,6 +27,11 @@ func UploadAvatar(ctx context.Context, uid string, data []byte, contentType stri
 	return id, nil
 }
 
+// StoreImage 存储一张通用图片（如朋友圈配图），返回其 _id。
+func StoreImage(ctx context.Context, data []byte, contentType string) (string, error) {
+	return saveImage(ctx, data, contentType)
+}
+
 // GetAvatar 按 _id 读取头像图片（二进制 + content-type）。
 func GetAvatar(ctx context.Context, id string) ([]byte, string, error) {
 	return getImage(ctx, id)

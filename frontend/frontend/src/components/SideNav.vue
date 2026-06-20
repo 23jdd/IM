@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from 'vue'
-import { ChatDotRound, Avatar, SwitchButton } from '@element-plus/icons-vue'
+import { ChatDotRound, Avatar, SwitchButton, Camera } from '@element-plus/icons-vue'
 import { avatarColor, avatarText } from '../utils/format'
 
 const props = defineProps({
@@ -45,6 +45,14 @@ const bg = computed(() => avatarColor(props.uid || props.name))
         @click="emit('change-view', 'contacts')"
       >
         <el-icon :size="24"><Avatar /></el-icon>
+      </div>
+      <div
+        class="nav-item"
+        :class="{ active: activeView === 'moments' }"
+        title="朋友圈"
+        @click="emit('change-view', 'moments')"
+      >
+        <el-icon :size="24"><Camera /></el-icon>
       </div>
     </div>
 

@@ -17,8 +17,20 @@ export const api = {
     AuthService.UploadAvatar(token, dataBase64, contentType),
   getAvatar: (token, id) => AuthService.GetAvatar(token, id),
   getAvatarByUid: (token, uid) => AuthService.GetAvatarByUid(token, uid),
+  momentPublish: (token, content, images) =>
+    AuthService.MomentPublish(token, content, images),
+  momentTimeline: (token) => AuthService.MomentTimeline(token),
+  momentLike: (token, momentId) => AuthService.MomentLike(token, momentId),
+  momentComment: (token, momentId, content) =>
+    AuthService.MomentComment(token, momentId, content),
+  momentDelete: (token, momentId) => AuthService.MomentDelete(token, momentId),
   getFriends: (token) => AuthService.GetFriends(token),
   getConversations: (token) => AuthService.GetConversations(token),
+  friendRequest: (token, friendUid, remark) =>
+    AuthService.FriendRequest(token, friendUid, remark),
+  friendRequests: (token) => AuthService.FriendRequests(token),
+  friendAccept: (token, friendUid) => AuthService.FriendAccept(token, friendUid),
+  friendRemove: (token, friendUid) => AuthService.FriendRemove(token, friendUid),
   groupCreate: (token, name, description) =>
     AuthService.GroupCreate(token, name, description),
   groupList: (token) => AuthService.GroupList(token),

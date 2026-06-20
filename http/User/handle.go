@@ -240,6 +240,180 @@ func GetAvatarByUid(c *gin.Context) {
 	})
 }
 
+func parseDataURL(s string) (contentType, data string) {
+	contentType = "image/jpeg"
+	idx := strings.Index(s, ",")
+	if idx < 0 {
+		return contentType, s
+	}
+	meta := s[:idx]
+	data = s[idx+1:]
+	if strings.HasPrefix(meta, "data:") {
+		meta = meta[len("data:"):]
+		if semi := strings.Index(meta, ";"); semi >= 0 {
+			meta = meta[:semi]
+		}
+		if meta != "" {
+			contentType = meta
+		}
+	}
+	return contentType, data
+}
+
+func PublishMoment(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		Content string   `json:"content"`
+		Images  []string `json:"images"` // data URL 列表
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	if req.Content == "" && len(req.Images) == 0 {
+		fail(c, -1, "content or images required")
+		return
+	}
+	imageIds := make([]string, 0, len(req.Images))
+	for _, dataURL := range req.Images {
+		ct, raw := parseDataURL(dataURL)
+		data, err := base64.StdEncoding.DecodeString(raw)
+		if err != nil {
+			continue
+		}
+		id, err := service.StoreImage(c.Request.Context(), data, ct)
+		if err == nil {
+			imageIds = append(imageIds, id)
+		}
+	}
+	m, err := service.PublishMoment(c.Request.Context(), uid, req.Content, imageIds)
+	if err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, m)
+}
+
+func GetTimeline(c *gin.Context) {
+	uid := c.GetString("uid")
+	resp, err := service.GetTimeline(c.Request.Context(), uid)
+	if err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, resp)
+}
+
+func LikeMoment(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		MomentId string `json:"moment_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	liked, err := service.ToggleLike(c.Request.Context(), req.MomentId, uid)
+	if err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, gin.H{"liked": liked})
+}
+
+func CommentMoment(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		MomentId string `json:"moment_id" binding:"required"`
+		Content  string `json:"content" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	cm, err := service.CommentMoment(c.Request.Context(), req.MomentId, uid, req.Content)
+	if err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, cm)
+}
+
+func DeleteMoment(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		MomentId string `json:"moment_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	if err := service.DeleteMoment(c.Request.Context(), req.MomentId, uid); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, nil)
+}
+
+func AddFriend(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		FriendUid string `json:"friend_uid" binding:"required"`
+		Remark    string `json:"remark"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	if err := service.SendFriendRequest(c.Request.Context(), uid, req.FriendUid, req.Remark); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, nil)
+}
+
+func GetFriendRequests(c *gin.Context) {
+	uid := c.GetString("uid")
+	resp, err := service.GetFriendRequests(c.Request.Context(), uid)
+	if err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, resp)
+}
+
+func AcceptFriend(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		FriendUid string `json:"friend_uid" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	if err := service.AcceptFriendRequest(c.Request.Context(), uid, req.FriendUid); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, nil)
+}
+
+func RemoveFriend(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		FriendUid string `json:"friend_uid" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	if err := service.RemoveFriend(c.Request.Context(), uid, req.FriendUid); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, nil)
+}
+
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		auth := c.GetHeader("Authorization")

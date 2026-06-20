@@ -174,6 +174,44 @@ func (a *AuthService) GetFriends(token string) ([]FriendInfo, error) {
 	return out, nil
 }
 
+type FriendRequestInfo struct {
+	Uid       string `json:"uid"`        // 申请人
+	FriendUid string `json:"friend_uid"` // 接收方（我）
+	Status    int    `json:"status"`
+	Remark    string `json:"remark"`
+}
+
+// FriendRequest 向对方发起好友申请。
+func (a *AuthService) FriendRequest(token, friendUid, remark string) error {
+	return a.do(http.MethodPost, "/api/friend/request", token, map[string]string{
+		"friend_uid": friendUid,
+		"remark":     remark,
+	}, nil)
+}
+
+// FriendRequests 获取收到的好友申请列表。
+func (a *AuthService) FriendRequests(token string) ([]FriendRequestInfo, error) {
+	var out []FriendRequestInfo
+	if err := a.do(http.MethodGet, "/api/friend/requests", token, nil, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// FriendAccept 接受好友申请。
+func (a *AuthService) FriendAccept(token, friendUid string) error {
+	return a.do(http.MethodPost, "/api/friend/accept", token, map[string]string{
+		"friend_uid": friendUid,
+	}, nil)
+}
+
+// FriendRemove 删除好友。
+func (a *AuthService) FriendRemove(token, friendUid string) error {
+	return a.do(http.MethodPost, "/api/friend/remove", token, map[string]string{
+		"friend_uid": friendUid,
+	}, nil)
+}
+
 type ConversationInfo struct {
 	Peer    string `json:"peer"`
 	Content string `json:"content"`
@@ -294,4 +332,69 @@ func (a *AuthService) GetAvatarByUid(token, uid string) (string, error) {
 		ct = "image/png"
 	}
 	return "data:" + ct + ";base64," + out.Data, nil
+}
+
+type MomentCommentInfo struct {
+	Uid       string `json:"uid"`
+	Content   string `json:"content"`
+	CreatedAt string `json:"created_at"`
+}
+
+type MomentInfo struct {
+	MomentId  string              `json:"moment_id"`
+	Uid       string              `json:"uid"`
+	Content   string              `json:"content"`
+	Images    []string            `json:"images"`
+	Likes     []string            `json:"likes"`
+	Comments  []MomentCommentInfo `json:"comments"`
+	CreatedAt string              `json:"created_at"`
+}
+
+// MomentPublish 发布朋友圈动态。images 为图片 data URL 列表。
+func (a *AuthService) MomentPublish(token, content string, images []string) (*MomentInfo, error) {
+	var out MomentInfo
+	if err := a.do(http.MethodPost, "/api/moment/publish", token, map[string]any{
+		"content": content,
+		"images":  images,
+	}, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// MomentTimeline 获取朋友圈时间线（自己 + 好友）。
+func (a *AuthService) MomentTimeline(token string) ([]MomentInfo, error) {
+	var out []MomentInfo
+	if err := a.do(http.MethodGet, "/api/moment/timeline", token, nil, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// MomentLike 切换点赞，返回切换后的状态。
+func (a *AuthService) MomentLike(token, momentId string) (bool, error) {
+	var out struct {
+		Liked bool `json:"liked"`
+	}
+	if err := a.do(http.MethodPost, "/api/moment/like", token, map[string]string{
+		"moment_id": momentId,
+	}, &out); err != nil {
+		return false, err
+	}
+	return out.Liked, nil
+}
+
+// MomentComment 评论动态。
+func (a *AuthService) MomentComment(token, momentId, content string) error {
+	return a.do(http.MethodPost, "/api/moment/comment", token, map[string]string{
+		"moment_id": momentId,
+		"content":   content,
+	}, nil)
+}
+
+// MomentDelete 删除自己的动态。
+func (a *AuthService) MomentDelete(token, momentId string) error {
+	return a.do(http.MethodPost, "/api/moment/delete", token, map[string]string{
+		"moment_id": momentId,
+	}, nil)
 }

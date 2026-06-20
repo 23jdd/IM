@@ -7,6 +7,7 @@ import ConversationList from '../components/ConversationList.vue'
 import ContactsPanel from '../components/ContactsPanel.vue'
 import ChatPanel from '../components/ChatPanel.vue'
 import ProfileDialog from '../components/ProfileDialog.vue'
+import Moments from '../components/Moments.vue'
 import { api, onEvent, EVT } from '../api'
 import { useUserStore } from '../store/user'
 import { useChatStore } from '../store/chat'
@@ -143,12 +144,13 @@ onUnmounted(() => {
       @logout="onLogout"
     />
 
-    <div class="list-col">
+    <div class="list-col" v-show="activeView !== 'moments'">
       <ConversationList v-show="activeView === 'chats'" />
       <ContactsPanel v-show="activeView === 'contacts'" @open-chat="onOpenChat" />
     </div>
 
-    <ChatPanel class="main-col" />
+    <ChatPanel class="main-col" v-show="activeView !== 'moments'" />
+    <Moments v-if="activeView === 'moments'" class="main-col" />
 
     <ProfileDialog v-model="profileVisible" />
   </div>

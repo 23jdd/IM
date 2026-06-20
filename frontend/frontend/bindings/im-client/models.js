@@ -97,6 +97,57 @@ export class FriendInfo {
     }
 }
 
+export class FriendRequestInfo {
+    /**
+     * Creates a new FriendRequestInfo instance.
+     * @param {Partial<FriendRequestInfo>} [$$source = {}] - The source object to create the FriendRequestInfo.
+     */
+    constructor($$source = {}) {
+        if (!("uid" in $$source)) {
+            /**
+             * 申请人
+             * @member
+             * @type {string}
+             */
+            this["uid"] = "";
+        }
+        if (!("friend_uid" in $$source)) {
+            /**
+             * 接收方（我）
+             * @member
+             * @type {string}
+             */
+            this["friend_uid"] = "";
+        }
+        if (!("status" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["status"] = 0;
+        }
+        if (!("remark" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["remark"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new FriendRequestInfo instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {FriendRequestInfo}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new FriendRequestInfo(/** @type {Partial<FriendRequestInfo>} */($$parsedSource));
+    }
+}
+
 export class GroupBrief {
     /**
      * Creates a new GroupBrief instance.
@@ -216,6 +267,130 @@ export class LoginResult {
     }
 }
 
+export class MomentCommentInfo {
+    /**
+     * Creates a new MomentCommentInfo instance.
+     * @param {Partial<MomentCommentInfo>} [$$source = {}] - The source object to create the MomentCommentInfo.
+     */
+    constructor($$source = {}) {
+        if (!("uid" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["uid"] = "";
+        }
+        if (!("content" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["content"] = "";
+        }
+        if (!("created_at" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["created_at"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MomentCommentInfo instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {MomentCommentInfo}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new MomentCommentInfo(/** @type {Partial<MomentCommentInfo>} */($$parsedSource));
+    }
+}
+
+export class MomentInfo {
+    /**
+     * Creates a new MomentInfo instance.
+     * @param {Partial<MomentInfo>} [$$source = {}] - The source object to create the MomentInfo.
+     */
+    constructor($$source = {}) {
+        if (!("moment_id" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["moment_id"] = "";
+        }
+        if (!("uid" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["uid"] = "";
+        }
+        if (!("content" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["content"] = "";
+        }
+        if (!("images" in $$source)) {
+            /**
+             * @member
+             * @type {string[]}
+             */
+            this["images"] = [];
+        }
+        if (!("likes" in $$source)) {
+            /**
+             * @member
+             * @type {string[]}
+             */
+            this["likes"] = [];
+        }
+        if (!("comments" in $$source)) {
+            /**
+             * @member
+             * @type {MomentCommentInfo[]}
+             */
+            this["comments"] = [];
+        }
+        if (!("created_at" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["created_at"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new MomentInfo instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {MomentInfo}
+     */
+    static createFrom($$source = {}) {
+        const $$createField3_0 = $$createType0;
+        const $$createField4_0 = $$createType0;
+        const $$createField5_0 = $$createType2;
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        if ("images" in $$parsedSource) {
+            $$parsedSource["images"] = $$createField3_0($$parsedSource["images"]);
+        }
+        if ("likes" in $$parsedSource) {
+            $$parsedSource["likes"] = $$createField4_0($$parsedSource["likes"]);
+        }
+        if ("comments" in $$parsedSource) {
+            $$parsedSource["comments"] = $$createField5_0($$parsedSource["comments"]);
+        }
+        return new MomentInfo(/** @type {Partial<MomentInfo>} */($$parsedSource));
+    }
+}
+
 export class Profile {
     /**
      * Creates a new Profile instance.
@@ -327,3 +502,8 @@ export class RegisterResult {
         return new RegisterResult(/** @type {Partial<RegisterResult>} */($$parsedSource));
     }
 }
+
+// Private type creation functions
+const $$createType0 = $Create.Array($Create.Any);
+const $$createType1 = MomentCommentInfo.createFrom;
+const $$createType2 = $Create.Array($$createType1);

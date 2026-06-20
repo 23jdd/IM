@@ -28,6 +28,48 @@ export function ChangePassword(token, oldPassword, newPassword) {
 }
 
 /**
+ * FriendAccept 接受好友申请。
+ * @param {string} token
+ * @param {string} friendUid
+ * @returns {$CancellablePromise<void>}
+ */
+export function FriendAccept(token, friendUid) {
+    return $Call.ByID(2419095335, token, friendUid);
+}
+
+/**
+ * FriendRemove 删除好友。
+ * @param {string} token
+ * @param {string} friendUid
+ * @returns {$CancellablePromise<void>}
+ */
+export function FriendRemove(token, friendUid) {
+    return $Call.ByID(960749231, token, friendUid);
+}
+
+/**
+ * FriendRequest 向对方发起好友申请。
+ * @param {string} token
+ * @param {string} friendUid
+ * @param {string} remark
+ * @returns {$CancellablePromise<void>}
+ */
+export function FriendRequest(token, friendUid, remark) {
+    return $Call.ByID(291820476, token, friendUid, remark);
+}
+
+/**
+ * FriendRequests 获取收到的好友申请列表。
+ * @param {string} token
+ * @returns {$CancellablePromise<$models.FriendRequestInfo[]>}
+ */
+export function FriendRequests(token) {
+    return $Call.ByID(817458909, token).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType1($result);
+    }));
+}
+
+/**
  * GetAvatar 按 _id 读取头像，返回可直接用于 <img src> 的 data URL（无图返回空串）。
  * @param {string} token
  * @param {string} id
@@ -54,7 +96,7 @@ export function GetAvatarByUid(token, uid) {
  */
 export function GetConversations(token) {
     return $Call.ByID(2281367027, token).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType1($result);
+        return $$createType3($result);
     }));
 }
 
@@ -65,7 +107,7 @@ export function GetConversations(token) {
  */
 export function GetFriends(token) {
     return $Call.ByID(3765766454, token).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType3($result);
+        return $$createType5($result);
     }));
 }
 
@@ -76,7 +118,7 @@ export function GetFriends(token) {
  */
 export function GetProfile(token) {
     return $Call.ByID(588788746, token).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType5($result);
+        return $$createType7($result);
     }));
 }
 
@@ -89,7 +131,7 @@ export function GetProfile(token) {
  */
 export function GroupCreate(token, name, description) {
     return $Call.ByID(390833698, token, name, description).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType7($result);
+        return $$createType9($result);
     }));
 }
 
@@ -110,7 +152,7 @@ export function GroupJoin(token, groupId) {
  */
 export function GroupList(token) {
     return $Call.ByID(2313833298, token).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType8($result);
+        return $$createType10($result);
     }));
 }
 
@@ -122,7 +164,7 @@ export function GroupList(token) {
  */
 export function GroupMembers(token, groupId) {
     return $Call.ByID(943058937, token, groupId).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType10($result);
+        return $$createType12($result);
     }));
 }
 
@@ -134,7 +176,62 @@ export function GroupMembers(token, groupId) {
  */
 export function Login(uid, password) {
     return $Call.ByID(655276660, uid, password).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType12($result);
+        return $$createType14($result);
+    }));
+}
+
+/**
+ * MomentComment 评论动态。
+ * @param {string} token
+ * @param {string} momentId
+ * @param {string} content
+ * @returns {$CancellablePromise<void>}
+ */
+export function MomentComment(token, momentId, content) {
+    return $Call.ByID(487229832, token, momentId, content);
+}
+
+/**
+ * MomentDelete 删除自己的动态。
+ * @param {string} token
+ * @param {string} momentId
+ * @returns {$CancellablePromise<void>}
+ */
+export function MomentDelete(token, momentId) {
+    return $Call.ByID(4235253532, token, momentId);
+}
+
+/**
+ * MomentLike 切换点赞，返回切换后的状态。
+ * @param {string} token
+ * @param {string} momentId
+ * @returns {$CancellablePromise<boolean>}
+ */
+export function MomentLike(token, momentId) {
+    return $Call.ByID(3480998972, token, momentId);
+}
+
+/**
+ * MomentPublish 发布朋友圈动态。images 为图片 data URL 列表。
+ * @param {string} token
+ * @param {string} content
+ * @param {string[]} images
+ * @returns {$CancellablePromise<$models.MomentInfo | null>}
+ */
+export function MomentPublish(token, content, images) {
+    return $Call.ByID(2613901478, token, content, images).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType16($result);
+    }));
+}
+
+/**
+ * MomentTimeline 获取朋友圈时间线（自己 + 好友）。
+ * @param {string} token
+ * @returns {$CancellablePromise<$models.MomentInfo[]>}
+ */
+export function MomentTimeline(token) {
+    return $Call.ByID(2506335140, token).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType17($result);
     }));
 }
 
@@ -148,7 +245,7 @@ export function Login(uid, password) {
  */
 export function Register(name, password, email, phone) {
     return $Call.ByID(3233095442, name, password, email, phone).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType14($result);
+        return $$createType19($result);
     }));
 }
 
@@ -183,18 +280,23 @@ export function UploadAvatar(token, dataBase64, contentType) {
 }
 
 // Private type creation functions
-const $$createType0 = $models.ConversationInfo.createFrom;
+const $$createType0 = $models.FriendRequestInfo.createFrom;
 const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = $models.FriendInfo.createFrom;
+const $$createType2 = $models.ConversationInfo.createFrom;
 const $$createType3 = $Create.Array($$createType2);
-const $$createType4 = $models.Profile.createFrom;
-const $$createType5 = $Create.Nullable($$createType4);
-const $$createType6 = $models.GroupBrief.createFrom;
+const $$createType4 = $models.FriendInfo.createFrom;
+const $$createType5 = $Create.Array($$createType4);
+const $$createType6 = $models.Profile.createFrom;
 const $$createType7 = $Create.Nullable($$createType6);
-const $$createType8 = $Create.Array($$createType6);
-const $$createType9 = $models.GroupMemberInfo.createFrom;
-const $$createType10 = $Create.Array($$createType9);
-const $$createType11 = $models.LoginResult.createFrom;
-const $$createType12 = $Create.Nullable($$createType11);
-const $$createType13 = $models.RegisterResult.createFrom;
+const $$createType8 = $models.GroupBrief.createFrom;
+const $$createType9 = $Create.Nullable($$createType8);
+const $$createType10 = $Create.Array($$createType8);
+const $$createType11 = $models.GroupMemberInfo.createFrom;
+const $$createType12 = $Create.Array($$createType11);
+const $$createType13 = $models.LoginResult.createFrom;
 const $$createType14 = $Create.Nullable($$createType13);
+const $$createType15 = $models.MomentInfo.createFrom;
+const $$createType16 = $Create.Nullable($$createType15);
+const $$createType17 = $Create.Array($$createType15);
+const $$createType18 = $models.RegisterResult.createFrom;
+const $$createType19 = $Create.Nullable($$createType18);

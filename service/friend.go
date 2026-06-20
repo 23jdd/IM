@@ -9,53 +9,58 @@ import (
 	"time"
 )
 
-func SendFriendRequest(ctx context.Context, uid, friendUid, remark string) error {
-	if uid == friendUid {
+// 通过函数变量注入，便于好友逻辑的单元测试（不依赖真实 DB）。
+var (
+	insertFriend       = mysql.InsertFriend
+	updateFriendStatus = mysql.UpdateFriendStatus
+	deleteFriendRel    = mysql.DeleteFriend
+	findFriendList     = mysql.FindFriendList
+)
+
+// SendFriendRequest requester 向 target 发起好友申请（单向 pending，避免申请人自己也看到申请）。
+func SendFriendRequest(ctx context.Context, requester, target, remark string) error {
+	if requester == target {
 		return errors.New("cannot add yourself")
 	}
-
-	now := time.Now()
-	err := mysql.InsertFriend(ctx, &model.FriendRelation{
-		Uid:       uid,
-		FriendUid: friendUid,
+	if err := insertFriend(ctx, &model.FriendRelation{
+		Uid:       requester,
+		FriendUid: target,
 		Status:    model.FriendStatusPending,
 		Remark:    remark,
-		CreatedAt: now,
-	})
-	if err != nil {
-		return fmt.Errorf("insert friend: %w", err)
+		CreatedAt: time.Now(),
+	}); err != nil {
+		return fmt.Errorf("insert friend request: %w", err)
 	}
-
-	_ = mysql.InsertFriend(ctx, &model.FriendRelation{
-		Uid:       friendUid,
-		FriendUid: uid,
-		Status:    model.FriendStatusPending,
-		CreatedAt: now,
-	})
-
 	return nil
 }
 
-func AcceptFriendRequest(ctx context.Context, uid, friendUid string) error {
-	if err := mysql.UpdateFriendStatus(ctx, uid, friendUid, model.FriendStatusAccepted); err != nil {
+// AcceptFriendRequest accepter 接受 requester 的申请：把 requester→accepter 置为 accepted，
+// 并建立 accepter→requester 的 accepted 关系（双向成为好友）。
+func AcceptFriendRequest(ctx context.Context, accepter, requester string) error {
+	if err := updateFriendStatus(ctx, requester, accepter, model.FriendStatusAccepted); err != nil {
 		return fmt.Errorf("accept friend: %w", err)
 	}
-	_ = mysql.UpdateFriendStatus(ctx, friendUid, uid, model.FriendStatusAccepted)
+	_ = insertFriend(ctx, &model.FriendRelation{
+		Uid:       accepter,
+		FriendUid: requester,
+		Status:    model.FriendStatusAccepted,
+		CreatedAt: time.Now(),
+	})
 	return nil
 }
 
 func BlockFriend(ctx context.Context, uid, friendUid string) error {
-	if err := mysql.UpdateFriendStatus(ctx, uid, friendUid, model.FriendStatusBlocked); err != nil {
+	if err := updateFriendStatus(ctx, uid, friendUid, model.FriendStatusBlocked); err != nil {
 		return fmt.Errorf("block friend: %w", err)
 	}
 	return nil
 }
 
 func RemoveFriend(ctx context.Context, uid, friendUid string) error {
-	if err := mysql.DeleteFriend(ctx, uid, friendUid); err != nil {
+	if err := deleteFriendRel(ctx, uid, friendUid); err != nil {
 		return fmt.Errorf("remove friend: %w", err)
 	}
-	_ = mysql.DeleteFriend(ctx, friendUid, uid)
+	_ = deleteFriendRel(ctx, friendUid, uid)
 	return nil
 }
 
@@ -66,9 +71,6 @@ func GetFriends(ctx context.Context, uid string) ([]*model.FriendRelation, error
 func GetFriendRequests(ctx context.Context, uid string) ([]*model.FriendRelation, error) {
 	return mysql.FindFriendRequests(ctx, uid)
 }
-
-// findFriendList 便于测试注入。
-var findFriendList = mysql.FindFriendList
 
 // GetFriendList 返回好友列表展示信息（含昵称/头像/备注）。
 func GetFriendList(ctx context.Context, uid string) ([]*model.FriendInfo, error) {

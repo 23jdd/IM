@@ -12,9 +12,12 @@ export {
 export {
     ConversationInfo,
     FriendInfo,
+    FriendRequestInfo,
     GroupBrief,
     GroupMemberInfo,
     LoginResult,
+    MomentCommentInfo,
+    MomentInfo,
     Profile,
     RegisterResult
 } from "./models.js";

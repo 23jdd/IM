@@ -29,6 +29,7 @@ func InitMongoDB(uri, dbName string) error {
 	Client = client
 	MsgCol = client.Database(dbName).Collection("messages")
 	AvatarCol = client.Database(dbName).Collection("avatars")
+	MomentCol = client.Database(dbName).Collection("moments")
 	return nil
 }
 
