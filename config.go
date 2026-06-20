@@ -6,11 +6,21 @@ import (
 )
 
 type Config struct {
-	HttpAddress string `yaml:"http_address"`
-	HttpPort    int    `yaml:"http_port"`
-	TCPAddr     string `yaml:"tcp_address"`
-	TcpPort     int    `yaml:"tcp_port"`
-	DataSource  string `yaml:"data_source"`
+	HttpAddress   string `yaml:"http_address"`
+	HttpPort      int    `yaml:"http_port"`
+	TCPAddr       string `yaml:"tcp_address"`
+	TcpPort       int    `yaml:"tcp_port"`
+	DataSource    string `yaml:"data_source"`
+	MongoURI      string `yaml:"mongo_uri"`
+	MongoDB       string `yaml:"mongo_db"`
+	RedisAddr     string `yaml:"redis_addr"`
+	RedisPassword string `yaml:"redis_password"`
+	RedisDB       int    `yaml:"redis_db"`
+	RabbitMQURL   string `yaml:"rabbitmq_url"`
+	LogPath       string `yaml:"log_path"`
+	LogLevel      string `yaml:"log_level"`
+	GatewayPort   int    `yaml:"gateway_port"`
+	BackendAddrs  []string `yaml:"backend_addrs"`
 }
 
 func MustLoadConfig(configPath string) *Config {

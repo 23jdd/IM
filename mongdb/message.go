@@ -36,6 +36,7 @@ func SaveMessage(ctx context.Context, msg *model.ChatMessage) error {
 }
 
 func GetChatHistory(ctx context.Context, uid1, uid2 string, before time.Time, limit int64) ([]*MessageDoc, error) {
+	//search
 	filter := bson.D{
 		{Key: "$or", Value: bson.A{
 			bson.D{{Key: "from_uid", Value: uid1}, {Key: "to_uid", Value: uid2}},
