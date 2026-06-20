@@ -18,6 +18,7 @@ export const useUserStore = defineStore('user', {
       uid: saved.uid || '',
       name: saved.name || '',
       profile: saved.profile || null,
+      avatarUrl: '', // 头像 data URL（不持久化，登录后按 avatar id 解析）
     }
   },
   actions: {
@@ -43,11 +44,15 @@ export const useUserStore = defineStore('user', {
       if (p && p.name) this.name = p.name
       this.persist()
     },
+    setAvatarUrl(url) {
+      this.avatarUrl = url || ''
+    },
     logout() {
       this.token = ''
       this.uid = ''
       this.name = ''
       this.profile = null
+      this.avatarUrl = ''
       localStorage.removeItem(KEY)
     },
   },

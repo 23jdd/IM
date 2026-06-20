@@ -3,6 +3,7 @@ package User
 import (
 	"IM/service"
 	"IM/utils"
+	"encoding/base64"
 	"net/http"
 	"strings"
 
@@ -176,6 +177,67 @@ func JoinGroup(c *gin.Context) {
 		return
 	}
 	ok(c, nil)
+}
+
+func UploadAvatar(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		DataBase64  string `json:"data_base64" binding:"required"`
+		ContentType string `json:"content_type"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	data, err := base64.StdEncoding.DecodeString(req.DataBase64)
+	if err != nil {
+		fail(c, -1, "invalid base64 data")
+		return
+	}
+	ct := req.ContentType
+	if ct == "" {
+		ct = "image/png"
+	}
+	id, err := service.UploadAvatar(c.Request.Context(), uid, data, ct)
+	if err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, gin.H{"avatar": id})
+}
+
+func GetAvatar(c *gin.Context) {
+	id := c.Query("id")
+	if id == "" {
+		fail(c, -1, "id required")
+		return
+	}
+	data, ct, err := service.GetAvatar(c.Request.Context(), id)
+	if err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, gin.H{
+		"content_type": ct,
+		"data":         base64.StdEncoding.EncodeToString(data),
+	})
+}
+
+func GetAvatarByUid(c *gin.Context) {
+	uid := c.Query("uid")
+	if uid == "" {
+		fail(c, -1, "uid required")
+		return
+	}
+	data, ct, err := service.GetAvatarByUid(c.Request.Context(), uid)
+	if err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, gin.H{
+		"content_type": ct,
+		"data":         base64.StdEncoding.EncodeToString(data),
+	})
 }
 
 func AuthMiddleware() gin.HandlerFunc {

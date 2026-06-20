@@ -13,6 +13,10 @@ export const api = {
   updateProfile: (token, profile) => AuthService.UpdateProfile(token, profile),
   changePassword: (token, oldPwd, newPwd) =>
     AuthService.ChangePassword(token, oldPwd, newPwd),
+  uploadAvatar: (token, dataBase64, contentType) =>
+    AuthService.UploadAvatar(token, dataBase64, contentType),
+  getAvatar: (token, id) => AuthService.GetAvatar(token, id),
+  getAvatarByUid: (token, uid) => AuthService.GetAvatarByUid(token, uid),
   getFriends: (token) => AuthService.GetFriends(token),
   getConversations: (token) => AuthService.GetConversations(token),
   groupCreate: (token, name, description) =>

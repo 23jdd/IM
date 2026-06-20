@@ -5,8 +5,8 @@ tcp_port: 9000
 data_source: "root:1234@tcp(127.0.0.1:3306)/Im?parseTime=true&loc=UTC"
 mongo_uri: "mongodb://127.0.0.1:27017"
 mongo_db: "im"
-redis_addr: "127.0.0.1:6379"
-redis_password: ""
+redis_addr: "192.168.116.130:6379"
+redis_password: "1234"
 redis_db: 0
 rabbitmq_url: "amqp://guest:guest@127.0.0.1:5672/"
 log_path: "logs/im.log"

@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useChatStore } from '../store/chat'
-import { avatarColor, avatarText } from '../utils/format'
+import Avatar from './Avatar.vue'
 
 const chat = useChatStore()
 const emit = defineEmits(['open-chat'])
@@ -32,9 +32,7 @@ function openGroup(g) {
     <div class="list">
       <div class="section-title">我的群聊 ({{ groups.length }})</div>
       <div v-for="g in groups" :key="g.uid" class="item" @click="openGroup(g)">
-        <div class="avatar" :style="{ background: avatarColor(g.uid) }">
-          {{ avatarText(g.name) }}
-        </div>
+        <Avatar :uid="g.uid" :name="g.name" :group="true" :size="38" />
         <div class="info">
           <div class="name">{{ g.name }}</div>
           <div class="uid">群号: {{ g.uid }}</div>
@@ -44,9 +42,7 @@ function openGroup(g) {
 
       <div class="section-title">好友 ({{ contacts.length }})</div>
       <div v-for="c in contacts" :key="c.uid" class="item" @click="openFriend(c)">
-        <div class="avatar" :style="{ background: avatarColor(c.uid) }">
-          {{ avatarText(c.name) }}
-        </div>
+        <Avatar :uid="c.uid" :name="c.name" :size="38" />
         <div class="info">
           <div class="name">{{ c.name }}</div>
           <div class="uid">UID: {{ c.uid }}</div>

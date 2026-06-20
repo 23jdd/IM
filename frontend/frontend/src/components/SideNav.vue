@@ -8,6 +8,7 @@ const props = defineProps({
   connected: { type: Boolean, default: false },
   name: { type: String, default: '' },
   uid: { type: String, default: '' },
+  avatarUrl: { type: String, default: '' },
 })
 const emit = defineEmits(['change-view', 'open-profile', 'logout'])
 
@@ -20,11 +21,12 @@ const bg = computed(() => avatarColor(props.uid || props.name))
     <div class="nav-top">
       <div
         class="nav-avatar"
-        :style="{ background: bg }"
+        :style="{ background: avatarUrl ? 'transparent' : bg }"
         title="个人资料"
         @click="emit('open-profile')"
       >
-        {{ initial }}
+        <img v-if="avatarUrl" :src="avatarUrl" class="nav-avatar-img" alt="" />
+        <template v-else>{{ initial }}</template>
         <span class="status-dot" :class="{ on: connected }"></span>
       </div>
 
@@ -83,6 +85,12 @@ const bg = computed(() => avatarColor(props.uid || props.name))
   justify-content: center;
   cursor: pointer;
   margin-bottom: 6px;
+}
+.nav-avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 6px;
+  object-fit: cover;
 }
 .status-dot {
   position: absolute;

@@ -237,3 +237,61 @@ func (a *AuthService) GroupMembers(token, groupId string) ([]GroupMemberInfo, er
 	}
 	return out, nil
 }
+
+// UploadAvatar 上传头像（base64 图片），存 MongoDB 并更新 MySQL，返回图片 _id。
+func (a *AuthService) UploadAvatar(token, dataBase64, contentType string) (string, error) {
+	var out struct {
+		Avatar string `json:"avatar"`
+	}
+	if err := a.do(http.MethodPost, "/api/user/avatar", token, map[string]string{
+		"data_base64":  dataBase64,
+		"content_type": contentType,
+	}, &out); err != nil {
+		return "", err
+	}
+	return out.Avatar, nil
+}
+
+// GetAvatar 按 _id 读取头像，返回可直接用于 <img src> 的 data URL（无图返回空串）。
+func (a *AuthService) GetAvatar(token, id string) (string, error) {
+	if id == "" {
+		return "", nil
+	}
+	var out struct {
+		ContentType string `json:"content_type"`
+		Data        string `json:"data"`
+	}
+	if err := a.do(http.MethodGet, "/api/avatar?id="+url.QueryEscape(id), token, nil, &out); err != nil {
+		return "", err
+	}
+	if out.Data == "" {
+		return "", nil
+	}
+	ct := out.ContentType
+	if ct == "" {
+		ct = "image/png"
+	}
+	return "data:" + ct + ";base64," + out.Data, nil
+}
+
+// GetAvatarByUid 按用户 uid 解析头像，返回可直接用于 <img src> 的 data URL（无头像返回空串）。
+func (a *AuthService) GetAvatarByUid(token, uid string) (string, error) {
+	if uid == "" {
+		return "", nil
+	}
+	var out struct {
+		ContentType string `json:"content_type"`
+		Data        string `json:"data"`
+	}
+	if err := a.do(http.MethodGet, "/api/avatar/by-uid?uid="+url.QueryEscape(uid), token, nil, &out); err != nil {
+		return "", err
+	}
+	if out.Data == "" {
+		return "", nil
+	}
+	ct := out.ContentType
+	if ct == "" {
+		ct = "image/png"
+	}
+	return "data:" + ct + ";base64," + out.Data, nil
+}

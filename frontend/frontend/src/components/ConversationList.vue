@@ -5,7 +5,8 @@ import { ElMessage } from 'element-plus'
 import { useChatStore } from '../store/chat'
 import { useUserStore } from '../store/user'
 import { api } from '../api'
-import { formatTime, avatarColor, avatarText } from '../utils/format'
+import { formatTime } from '../utils/format'
+import Avatar from './Avatar.vue'
 
 const chat = useChatStore()
 const user = useUserStore()
@@ -127,9 +128,7 @@ function select(uid) {
         @click="select(c.uid)"
       >
         <el-badge :value="c.unread" :hidden="!c.unread" class="badge">
-          <div class="avatar" :style="{ background: avatarColor(c.uid) }">
-            {{ avatarText(c.name) }}
-          </div>
+          <Avatar :uid="c.uid" :name="c.name" :group="c.isGroup" :size="40" />
         </el-badge>
         <div class="meta">
           <div class="row1">

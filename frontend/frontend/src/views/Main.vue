@@ -49,6 +49,19 @@ async function connectFlow() {
 
 async function loadInitialData() {
   try {
+    const profile = await api.getProfile(user.token)
+    if (profile) {
+      user.setProfile(profile)
+      if (profile.avatar) {
+        const url = await api.getAvatar(user.token, profile.avatar)
+        user.setAvatarUrl(url)
+        chat.setAvatarCache(user.uid, url || '')
+      }
+    }
+  } catch (e) {
+    /* 资料/头像加载失败不阻断 */
+  }
+  try {
     const friends = await api.getFriends(user.token)
     chat.setFriends(friends || [])
   } catch (e) {
@@ -124,6 +137,7 @@ onUnmounted(() => {
       :connected="chat.connected"
       :name="user.name"
       :uid="user.uid"
+      :avatar-url="user.avatarUrl"
       @change-view="onChangeView"
       @open-profile="profileVisible = true"
       @logout="onLogout"

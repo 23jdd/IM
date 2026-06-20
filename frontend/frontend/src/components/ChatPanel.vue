@@ -5,7 +5,7 @@ import { Promotion, ChatLineRound, WarningFilled, Loading } from '@element-plus/
 import { useChatStore } from '../store/chat'
 import { useUserStore } from '../store/user'
 import { api } from '../api'
-import { formatTime, avatarColor, avatarText } from '../utils/format'
+import Avatar from './Avatar.vue'
 
 const chat = useChatStore()
 const user = useUserStore()
@@ -107,12 +107,12 @@ function onKeydown(e) {
           class="msg-row"
           :class="{ self: m.self }"
         >
-          <div
-            class="msg-avatar"
-            :style="{ background: m.self ? avatarColor(user.uid) : avatarColor(conv.uid) }"
-          >
-            {{ m.self ? avatarText(user.name) : avatarText(conv.name) }}
-          </div>
+          <Avatar
+            :uid="m.self ? user.uid : conv.uid"
+            :name="m.self ? user.name : conv.name"
+            :group="!m.self && conv.isGroup"
+            :size="38"
+          />
           <div class="bubble-wrap">
             <div class="bubble" :class="{ self: m.self }">{{ m.content }}</div>
             <div v-if="m.self && m.status !== 'sent'" class="msg-status">
@@ -145,9 +145,7 @@ function onKeydown(e) {
 
       <el-dialog v-model="membersVisible" title="群成员" width="320px" align-center>
         <div v-for="mem in members" :key="mem.uid" class="member-row">
-          <div class="member-avatar" :style="{ background: avatarColor(mem.uid) }">
-            {{ avatarText(mem.nickname || mem.uid) }}
-          </div>
+          <Avatar :uid="mem.uid" :name="mem.nickname || mem.uid" :size="34" />
           <div class="member-info">
             <div class="member-name">{{ mem.nickname || mem.uid }}</div>
             <div class="member-uid">UID: {{ mem.uid }}</div>

@@ -28,6 +28,26 @@ export function ChangePassword(token, oldPassword, newPassword) {
 }
 
 /**
+ * GetAvatar 按 _id 读取头像，返回可直接用于 <img src> 的 data URL（无图返回空串）。
+ * @param {string} token
+ * @param {string} id
+ * @returns {$CancellablePromise<string>}
+ */
+export function GetAvatar(token, id) {
+    return $Call.ByID(1717403080, token, id);
+}
+
+/**
+ * GetAvatarByUid 按用户 uid 解析头像，返回可直接用于 <img src> 的 data URL（无头像返回空串）。
+ * @param {string} token
+ * @param {string} uid
+ * @returns {$CancellablePromise<string>}
+ */
+export function GetAvatarByUid(token, uid) {
+    return $Call.ByID(3460249453, token, uid);
+}
+
+/**
  * GetConversations 获取会话列表（最近联系人）。
  * @param {string} token
  * @returns {$CancellablePromise<$models.ConversationInfo[]>}
@@ -149,6 +169,17 @@ export function SetBaseURL(url) {
  */
 export function UpdateProfile(token, p) {
     return $Call.ByID(2043013171, token, p);
+}
+
+/**
+ * UploadAvatar 上传头像（base64 图片），存 MongoDB 并更新 MySQL，返回图片 _id。
+ * @param {string} token
+ * @param {string} dataBase64
+ * @param {string} contentType
+ * @returns {$CancellablePromise<string>}
+ */
+export function UploadAvatar(token, dataBase64, contentType) {
+    return $Call.ByID(1054061075, token, dataBase64, contentType);
 }
 
 // Private type creation functions

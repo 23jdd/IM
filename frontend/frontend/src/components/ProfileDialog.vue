@@ -3,6 +3,7 @@ import { ref, reactive, watch } from 'vue'
 import { ElMessage } from 'element-plus'
 import { api } from '../api'
 import { useUserStore } from '../store/user'
+import { avatarText, avatarColor } from '../utils/format'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -12,6 +13,9 @@ const emit = defineEmits(['update:modelValue'])
 const user = useUserStore()
 const tab = ref('info')
 const loading = ref(false)
+const uploading = ref(false)
+const avatarUrl = ref('')
+const fileInput = ref(null)
 
 const form = reactive({
   uid: '',
@@ -36,6 +40,14 @@ watch(
     try {
       const p = await api.getProfile(user.token)
       Object.assign(form, p)
+      avatarUrl.value = user.avatarUrl || ''
+      if (!avatarUrl.value && form.avatar) {
+        try {
+          avatarUrl.value = await api.getAvatar(user.token, form.avatar)
+        } catch (e) {
+          /* ignore */
+        }
+      }
     } catch (e) {
       ElMessage.error('加载资料失败：' + String(e?.message || e))
     }
@@ -44,6 +56,48 @@ watch(
 
 function close() {
   emit('update:modelValue', false)
+}
+
+function onPickFile() {
+  if (fileInput.value) fileInput.value.click()
+}
+
+function readAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result)
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+async function onFileChange(e) {
+  const file = e.target.files && e.target.files[0]
+  if (!file) return
+  if (!file.type.startsWith('image/')) {
+    ElMessage.warning('请选择图片文件')
+    return
+  }
+  if (file.size > 2 * 1024 * 1024) {
+    ElMessage.warning('图片不能超过 2MB')
+    return
+  }
+  uploading.value = true
+  try {
+    const dataUrl = await readAsDataURL(file)
+    const base64 = dataUrl.split(',')[1] || ''
+    const id = await api.uploadAvatar(user.token, base64, file.type)
+    form.avatar = id
+    avatarUrl.value = dataUrl
+    user.setAvatarUrl(dataUrl)
+    user.setProfile({ ...form })
+    ElMessage.success('头像已更新')
+  } catch (err) {
+    ElMessage.error('上传失败：' + String(err?.message || err))
+  } finally {
+    uploading.value = false
+    if (fileInput.value) fileInput.value.value = ''
+  }
 }
 
 async function saveProfile() {
@@ -106,6 +160,23 @@ async function savePassword() {
   >
     <el-tabs v-model="tab">
       <el-tab-pane label="资料" name="info">
+        <div class="avatar-box">
+          <div
+            class="avatar-preview"
+            :style="{ background: avatarUrl ? 'transparent' : avatarColor(form.uid) }"
+          >
+            <img v-if="avatarUrl" :src="avatarUrl" class="avatar-img" alt="" />
+            <template v-else>{{ avatarText(form.name) }}</template>
+          </div>
+          <el-button size="small" :loading="uploading" @click="onPickFile">更换头像</el-button>
+          <input
+            ref="fileInput"
+            type="file"
+            accept="image/*"
+            style="display: none"
+            @change="onFileChange"
+          />
+        </div>
         <el-form label-width="72px">
           <el-form-item label="账号">
             <el-input :model-value="form.uid" disabled />
@@ -167,5 +238,28 @@ async function savePassword() {
   justify-content: flex-end;
   gap: 8px;
   margin-top: 8px;
+}
+.avatar-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.avatar-preview {
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 </style>

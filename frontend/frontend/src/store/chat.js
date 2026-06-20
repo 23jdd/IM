@@ -20,6 +20,7 @@ export const useChatStore = defineStore('chat', {
     activeUid: '',
     connected: false,
     friends: [], // {uid, name, avatar}
+    avatarCache: {}, // uid -> dataUrl ('' 表示无头像)
   }),
 
   getters: {
@@ -39,6 +40,10 @@ export const useChatStore = defineStore('chat', {
 
     setConnected(v) {
       this.connected = v
+    },
+
+    setAvatarCache(uid, url) {
+      if (uid) this.avatarCache[uid] = url || ''
     },
 
     setFriends(list) {
@@ -199,6 +204,7 @@ export const useChatStore = defineStore('chat', {
       this.activeUid = ''
       this.connected = false
       this.friends = []
+      this.avatarCache = {}
     },
   },
 })
