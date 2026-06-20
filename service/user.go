@@ -30,6 +30,9 @@ type LoginReq struct {
 	Password string `json:"password" binding:"required"`
 }
 
+// findUserByLogin 支持 uid/手机/邮箱/昵称 登录；函数变量便于测试注入。
+var findUserByLogin = mysql.FindUserByLogin
+
 type LoginResp struct {
 	Token string `json:"token"`
 	Uid   string `json:"uid"`
@@ -91,7 +94,7 @@ func Register(ctx context.Context, req *RegisterReq) (*RegisterResp, error) {
 }
 
 func Login(ctx context.Context, req *LoginReq) (*LoginResp, error) {
-	user, err := mysql.UserModel.FindOne(ctx, req.Uid)
+	user, err := findUserByLogin(ctx, req.Uid)
 	if err != nil {
 		if errors.Is(err, model.ErrNotFound) {
 			return nil, errors.New("invalid uid or password")

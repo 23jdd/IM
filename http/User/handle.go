@@ -98,6 +98,28 @@ func ChangePassword(c *gin.Context) {
 	ok(c, nil)
 }
 
+func GetFriends(c *gin.Context) {
+	uid := c.GetString("uid")
+
+	resp, err := service.GetFriendList(c.Request.Context(), uid)
+	if err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, resp)
+}
+
+func GetConversations(c *gin.Context) {
+	uid := c.GetString("uid")
+
+	resp, err := service.GetConversations(c.Request.Context(), uid)
+	if err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, resp)
+}
+
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		auth := c.GetHeader("Authorization")

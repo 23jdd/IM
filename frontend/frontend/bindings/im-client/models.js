@@ -6,6 +6,97 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
+export class ConversationInfo {
+    /**
+     * Creates a new ConversationInfo instance.
+     * @param {Partial<ConversationInfo>} [$$source = {}] - The source object to create the ConversationInfo.
+     */
+    constructor($$source = {}) {
+        if (!("peer" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["peer"] = "";
+        }
+        if (!("content" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["content"] = "";
+        }
+        if (!("time" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["time"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new ConversationInfo instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {ConversationInfo}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new ConversationInfo(/** @type {Partial<ConversationInfo>} */($$parsedSource));
+    }
+}
+
+export class FriendInfo {
+    /**
+     * Creates a new FriendInfo instance.
+     * @param {Partial<FriendInfo>} [$$source = {}] - The source object to create the FriendInfo.
+     */
+    constructor($$source = {}) {
+        if (!("uid" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["uid"] = "";
+        }
+        if (!("remark" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["remark"] = "";
+        }
+        if (!("name" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["name"] = "";
+        }
+        if (!("avatar" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["avatar"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new FriendInfo instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {FriendInfo}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new FriendInfo(/** @type {Partial<FriendInfo>} */($$parsedSource));
+    }
+}
+
 export class LoginResult {
     /**
      * Creates a new LoginResult instance.

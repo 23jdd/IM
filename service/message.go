@@ -56,3 +56,35 @@ func GetOfflineMessages(ctx context.Context, uid string) ([]*model.ChatMessage, 
 func MarkMessagesRead(ctx context.Context, msgIds []string) error {
 	return mysql.MarkMessagesRead(ctx, msgIds)
 }
+
+// ConversationItem 是会话列表项（最近联系人 + 最后一条消息）。
+type ConversationItem struct {
+	Peer    string    `json:"peer"`
+	Content string    `json:"content"`
+	Time    time.Time `json:"time"`
+}
+
+// findRecentMessages 便于测试注入。
+var findRecentMessages = mysql.FindRecentMessages
+
+// GetConversations 基于最近消息聚合出会话列表（按对端去重，取最近一条）。
+func GetConversations(ctx context.Context, uid string) ([]*ConversationItem, error) {
+	msgs, err := findRecentMessages(ctx, uid, 500)
+	if err != nil {
+		return nil, err
+	}
+	seen := make(map[string]bool)
+	out := make([]*ConversationItem, 0)
+	for _, m := range msgs { // 已按时间倒序
+		peer := m.ToUid
+		if m.FromUid != uid {
+			peer = m.FromUid
+		}
+		if peer == "" || peer == uid || seen[peer] {
+			continue
+		}
+		seen[peer] = true
+		out = append(out, &ConversationItem{Peer: peer, Content: m.Content, Time: m.CreatedAt})
+	}
+	return out, nil
+}

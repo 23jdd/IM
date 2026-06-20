@@ -7,13 +7,12 @@ const chat = useChatStore()
 const emit = defineEmits(['open-chat'])
 
 const contacts = computed(() =>
-  [...chat.conversations]
-    .filter((c) => c.uid !== '__unknown__')
-    .sort((a, b) => (a.name || '').localeCompare(b.name || ''))
+  [...chat.friends].sort((a, b) => (a.name || '').localeCompare(b.name || ''))
 )
 
-function open(uid) {
-  emit('open-chat', uid)
+function open(c) {
+  chat.ensureConversation(c.uid, c.name)
+  emit('open-chat', c.uid)
 }
 </script>
 
@@ -21,7 +20,7 @@ function open(uid) {
   <div class="contacts">
     <div class="head">通讯录</div>
     <div class="list">
-      <div v-for="c in contacts" :key="c.uid" class="item" @click="open(c.uid)">
+      <div v-for="c in contacts" :key="c.uid" class="item" @click="open(c)">
         <div class="avatar" :style="{ background: avatarColor(c.uid) }">
           {{ avatarText(c.name) }}
         </div>
@@ -31,7 +30,7 @@ function open(uid) {
         </div>
       </div>
       <div v-if="!contacts.length" class="empty">
-        暂无联系人，去“聊天”发起会话即可添加
+        暂无好友
       </div>
     </div>
   </div>

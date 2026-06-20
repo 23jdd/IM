@@ -156,3 +156,34 @@ func (a *AuthService) ChangePassword(token, oldPassword, newPassword string) err
 		"new_password": newPassword,
 	}, nil)
 }
+
+type FriendInfo struct {
+	Uid    string `json:"uid"`
+	Remark string `json:"remark"`
+	Name   string `json:"name"`
+	Avatar string `json:"avatar"`
+}
+
+// GetFriends 获取好友列表。
+func (a *AuthService) GetFriends(token string) ([]FriendInfo, error) {
+	var out []FriendInfo
+	if err := a.do(http.MethodGet, "/api/friend/list", token, nil, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+type ConversationInfo struct {
+	Peer    string `json:"peer"`
+	Content string `json:"content"`
+	Time    string `json:"time"`
+}
+
+// GetConversations 获取会话列表（最近联系人）。
+func (a *AuthService) GetConversations(token string) ([]ConversationInfo, error) {
+	var out []ConversationInfo
+	if err := a.do(http.MethodGet, "/api/conversation/list", token, nil, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}

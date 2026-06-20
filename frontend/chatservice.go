@@ -183,6 +183,10 @@ func (s *ChatService) dispatch(t byte, key uint32, body []byte) {
 		}
 	case msgBlob:
 		// 离线同步：每个 blob 为一条 ChatMessage 的 JSON。
+		// 回 ACK(key)，服务端收到确认后才将该消息标记为已读（可靠投递）。
+		if key != 0 {
+			_ = s.write(msgACK, key, nil)
+		}
 		var m map[string]any
 		if err := json.Unmarshal(body, &m); err == nil {
 			s.emit("im:offline", m)

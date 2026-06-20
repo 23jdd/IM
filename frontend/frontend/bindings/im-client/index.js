@@ -10,6 +10,8 @@ export {
 };
 
 export {
+    ConversationInfo,
+    FriendInfo,
     LoginResult,
     Profile,
     RegisterResult

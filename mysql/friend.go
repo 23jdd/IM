@@ -55,3 +55,18 @@ func DeleteFriend(ctx context.Context, uid, friendUid string) error {
 	_, err := friendConn.ExecCtx(ctx, query, uid, friendUid)
 	return err
 }
+
+// FindFriendList 返回已接受好友的展示信息（join user 表）。
+func FindFriendList(ctx context.Context, uid string) ([]*model.FriendInfo, error) {
+	query := `SELECT f.friend_uid, COALESCE(f.remark,'') AS remark,
+	                 COALESCE(u.name,'') AS name, COALESCE(u.avatar,'') AS avatar
+	          FROM friend_relation f
+	          LEFT JOIN user u ON f.friend_uid = u.uid
+	          WHERE f.uid = ? AND f.status = ?`
+	var items []*model.FriendInfo
+	err := friendConn.QueryRowsCtx(ctx, &items, query, uid, model.FriendStatusAccepted)
+	if err != nil {
+		return nil, err
+	}
+	return items, nil
+}

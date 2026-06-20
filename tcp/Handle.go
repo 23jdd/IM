@@ -3,6 +3,7 @@ package tcp
 import (
 	"IM/tcp/Message"
 	"IM/utils"
+	"context"
 	"log"
 )
 
@@ -39,6 +40,9 @@ func Verify(m *Message.Message, c *Client) {
 
 	c.setUID(claim.Uid)
 	c.server.clients.Store(claim.Uid, c)
+	if c.server.presence != nil {
+		_ = c.server.presence.SetOnline(context.Background(), claim.Uid, c.server.instanceID)
+	}
 	if err := c.SendAck(m.GetKey()); err != nil {
 		log.Println("verify ack send error:", err)
 		c.Close()

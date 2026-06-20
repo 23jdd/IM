@@ -28,13 +28,35 @@ export function ChangePassword(token, oldPassword, newPassword) {
 }
 
 /**
+ * GetConversations 获取会话列表（最近联系人）。
+ * @param {string} token
+ * @returns {$CancellablePromise<$models.ConversationInfo[]>}
+ */
+export function GetConversations(token) {
+    return $Call.ByID(2281367027, token).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType1($result);
+    }));
+}
+
+/**
+ * GetFriends 获取好友列表。
+ * @param {string} token
+ * @returns {$CancellablePromise<$models.FriendInfo[]>}
+ */
+export function GetFriends(token) {
+    return $Call.ByID(3765766454, token).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType3($result);
+    }));
+}
+
+/**
  * GetProfile 获取当前登录用户资料。
  * @param {string} token
  * @returns {$CancellablePromise<$models.Profile | null>}
  */
 export function GetProfile(token) {
     return $Call.ByID(588788746, token).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType1($result);
+        return $$createType5($result);
     }));
 }
 
@@ -46,7 +68,7 @@ export function GetProfile(token) {
  */
 export function Login(uid, password) {
     return $Call.ByID(655276660, uid, password).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType3($result);
+        return $$createType7($result);
     }));
 }
 
@@ -60,7 +82,7 @@ export function Login(uid, password) {
  */
 export function Register(name, password, email, phone) {
     return $Call.ByID(3233095442, name, password, email, phone).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType5($result);
+        return $$createType9($result);
     }));
 }
 
@@ -84,9 +106,13 @@ export function UpdateProfile(token, p) {
 }
 
 // Private type creation functions
-const $$createType0 = $models.Profile.createFrom;
-const $$createType1 = $Create.Nullable($$createType0);
-const $$createType2 = $models.LoginResult.createFrom;
-const $$createType3 = $Create.Nullable($$createType2);
-const $$createType4 = $models.RegisterResult.createFrom;
+const $$createType0 = $models.ConversationInfo.createFrom;
+const $$createType1 = $Create.Array($$createType0);
+const $$createType2 = $models.FriendInfo.createFrom;
+const $$createType3 = $Create.Array($$createType2);
+const $$createType4 = $models.Profile.createFrom;
 const $$createType5 = $Create.Nullable($$createType4);
+const $$createType6 = $models.LoginResult.createFrom;
+const $$createType7 = $Create.Nullable($$createType6);
+const $$createType8 = $models.RegisterResult.createFrom;
+const $$createType9 = $Create.Nullable($$createType8);

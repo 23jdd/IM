@@ -2,6 +2,7 @@ package tcp
 
 import (
 	"IM/tcp/Message"
+	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -28,6 +29,11 @@ type Client struct {
 	closeOnce    sync.Once
 	quit         chan struct{}
 	writeTimeout time.Duration
+
+	// 离线消息待确认表：key -> msgId。仅在 MessageHandler goroutine（handler 链）
+	// 内访问（发送在 OfflineSyncHandler、确认在 AckHandler），故无需加锁。
+	offlineKey  uint32
+	offlineAcks map[uint32]string
 }
 
 const WorkerSize int = 200
@@ -48,6 +54,7 @@ func NewClient(con net.Conn, server *Server) *Client {
 		heart:        make(chan any, 1),
 		quit:         make(chan struct{}),
 		writeTimeout: defaultWriteTimeout,
+		offlineAcks:  make(map[uint32]string),
 	}
 }
 
@@ -98,6 +105,10 @@ func (c *Client) MessageHandler() {
 				log.Println("heartbeat send failed, closing:", err)
 				c.Close()
 				return
+			}
+			// 心跳续期在线登记（配合 Redis presence TTL 保活）。
+			if uid := c.UID(); uid != "" && c.server.presence != nil {
+				_ = c.server.presence.SetOnline(context.Background(), uid, c.server.instanceID)
 			}
 		case message, ok := <-c.worker:
 			if !ok {
@@ -152,6 +163,9 @@ func (c *Client) Close() {
 		uid := c.UID()
 		if uid != "" {
 			c.server.clients.Delete(uid)
+			if c.server.presence != nil {
+				_ = c.server.presence.SetOffline(context.Background(), uid, c.server.instanceID)
+			}
 		}
 		c.server.count.Add(-1)
 		if err := c.con.Close(); err != nil {
@@ -239,4 +253,27 @@ func (c *Client) ReadMessage() (*Message.Message, error) {
 
 func (c *Client) IncrKey() {
 	c.key++
+}
+
+// nextOfflineKey 返回下一个非 0 的离线消息 key（24bit 内）。
+func (c *Client) nextOfflineKey() uint32 {
+	c.offlineKey++
+	if c.offlineKey == 0 {
+		c.offlineKey = 1
+	}
+	return c.offlineKey & 0xFFFFFF
+}
+
+// trackOffline 记录一条待客户端确认的离线消息。
+func (c *Client) trackOffline(key uint32, msgId string) {
+	c.offlineAcks[key] = msgId
+}
+
+// takeOffline 取出并移除某 key 对应的离线消息 id（收到 ACK 时调用）。
+func (c *Client) takeOffline(key uint32) (string, bool) {
+	id, ok := c.offlineAcks[key]
+	if ok {
+		delete(c.offlineAcks, key)
+	}
+	return id, ok
 }

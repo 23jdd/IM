@@ -54,3 +54,18 @@ func MarkMessagesRead(ctx context.Context, msgIds []string) error {
 	_, err := msgConn.ExecCtx(ctx, query, args...)
 	return err
 }
+
+// FindRecentMessages 返回与 uid 相关的最近单聊消息（按时间倒序），供会话列表聚合。
+func FindRecentMessages(ctx context.Context, uid string, limit int) ([]*model.ChatMessage, error) {
+	query := `SELECT msg_id, from_uid, to_uid, group_id, msg_type, content, status, created_at
+	           FROM chat_message
+	           WHERE from_uid = ? OR to_uid = ?
+	           ORDER BY created_at DESC
+	           LIMIT ?`
+	var msgs []*model.ChatMessage
+	err := msgConn.QueryRowsCtx(ctx, &msgs, query, uid, uid, limit)
+	if err != nil {
+		return nil, err
+	}
+	return msgs, nil
+}

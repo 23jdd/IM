@@ -9,6 +9,12 @@ import (
 	"time"
 )
 
+// 通过函数变量注入，便于离线投递逻辑的单元测试（不依赖真实 DB）。
+var (
+	getOfflineMessages = service.GetOfflineMessages
+	markMessagesRead   = service.MarkMessagesRead
+)
+
 type TextChatPayload struct {
 	ToUid   string `json:"to_uid"`
 	Content string `json:"content"`
@@ -54,6 +60,7 @@ func ChatMessageHandler(m *Message.Message, c *Client) {
 	}
 
 	c.SendAck(m.GetKey())
+	c.finished = true // 已消费，短路 Echo，避免把发送帧回显给发送方
 
 	err = c.server.RouteTo(payload.ToUid, Message.NewMessage(
 		Message.Text, 0,
@@ -65,31 +72,41 @@ func ChatMessageHandler(m *Message.Message, c *Client) {
 }
 
 func OfflineSyncHandler(m *Message.Message, c *Client) {
+	c.finished = true // 同步请求已消费，短路 Echo
 	ctx := context.Background()
-	msgs, err := service.GetOfflineMessages(ctx, c.UID())
+	msgs, err := getOfflineMessages(ctx, c.UID())
 	if err != nil {
 		log.Println("offline sync: query failed:", err)
 		return
 	}
 
+	// 逐条发送并分配非 0 key，记录待确认；只有收到客户端 ACK 后才标记已读，
+	// 避免"发完即标记"在客户端未收到时丢消息（实现 at-least-once）。
 	for _, msg := range msgs {
 		data, _ := json.Marshal(msg)
-		if err := c.SendBlob(0, data); err != nil {
+		key := c.nextOfflineKey()
+		if err := c.SendBlob(key, data); err != nil {
 			log.Println("offline sync: send failed:", err)
 			return
 		}
+		c.trackOffline(key, msg.MsgId)
 	}
+}
 
-	if len(msgs) > 0 {
-		ids := make([]string, len(msgs))
-		for i, msg := range msgs {
-			ids[i] = msg.MsgId
-		}
-		service.MarkMessagesRead(ctx, ids)
+// AckHandler 处理客户端对离线消息的确认：收到 ACK(key) 后才将对应消息标记已读。
+func AckHandler(m *Message.Message, c *Client) {
+	c.finished = true // ACK 已消费，短路 Echo
+	msgId, ok := c.takeOffline(m.GetKey())
+	if !ok {
+		return
+	}
+	if err := markMessagesRead(context.Background(), []string{msgId}); err != nil {
+		log.Println("offline ack: mark read failed:", err)
 	}
 }
 
 func init() {
 	RegisterRoute(Message.Text, ChatMessageHandler)
 	RegisterRoute(Message.Json, OfflineSyncHandler)
+	RegisterRoute(Message.ACK, AckHandler)
 }

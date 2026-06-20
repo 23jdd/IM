@@ -35,6 +35,8 @@ func (s *Server) Start() {
 			auth.GET("/user/profile", User.GetProfile)
 			auth.PUT("/user/profile", User.UpdateProfile)
 			auth.PUT("/user/password", User.ChangePassword)
+			auth.GET("/friend/list", User.GetFriends)
+			auth.GET("/conversation/list", User.GetConversations)
 		}
 	}
 

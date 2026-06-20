@@ -38,9 +38,11 @@ func main() {
 	}
 	defer mongdb.CloseMongoDB()
 
+	redisOK := false
 	if err := redis.InitRedis(config.RedisAddr, config.RedisPassword, config.RedisDB); err != nil {
 		log.Warn("redis init failed", zap.Error(err))
 	} else {
+		redisOK = true
 		defer redis.CloseRedis()
 	}
 
@@ -64,9 +66,21 @@ func main() {
 	}
 
 	server := tcp.NewServer(config.TCPAddr, config.TcpPort, 10*time.Second)
+	server.SetInstanceID(fmt.Sprintf("%s:%d", config.TCPAddr, config.TcpPort))
 	server.AddHandler(tcp.Verify)
 	server.AddHandler(tcp.Router)
 	server.AddHandler(tcp.Echo)
+
+	// 跨实例路由：Redis 可用时用共享在线表 + Pub/Sub 转发，否则退化为单机内存表。
+	if redisOK {
+		server.SetPresence(redis.NewRedisPresence())
+		server.SetForwarder(redis.NewRedisForwarder())
+		go redis.SubscribeRoutes(context.Background(), server.InstanceID(), func(uid string, frame []byte) {
+			_ = server.DeliverLocal(uid, frame)
+		})
+	} else {
+		server.SetPresence(tcp.NewMemoryPresence())
+	}
 
 	go server.Start()
 

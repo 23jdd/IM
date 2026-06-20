@@ -66,3 +66,11 @@ func GetFriends(ctx context.Context, uid string) ([]*model.FriendRelation, error
 func GetFriendRequests(ctx context.Context, uid string) ([]*model.FriendRelation, error) {
 	return mysql.FindFriendRequests(ctx, uid)
 }
+
+// findFriendList 便于测试注入。
+var findFriendList = mysql.FindFriendList
+
+// GetFriendList 返回好友列表展示信息（含昵称/头像/备注）。
+func GetFriendList(ctx context.Context, uid string) ([]*model.FriendInfo, error) {
+	return findFriendList(ctx, uid)
+}

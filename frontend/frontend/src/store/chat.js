@@ -19,6 +19,7 @@ export const useChatStore = defineStore('chat', {
     messages: {}, // uid -> [{id, content, time, self, status, key}]
     activeUid: '',
     connected: false,
+    friends: [], // {uid, name, avatar}
   }),
 
   getters: {
@@ -38,6 +39,32 @@ export const useChatStore = defineStore('chat', {
 
     setConnected(v) {
       this.connected = v
+    },
+
+    setFriends(list) {
+      this.friends = (list || []).map((f) => ({
+        uid: f.uid,
+        name: f.remark || f.name || f.uid,
+        avatar: f.avatar || '',
+      }))
+      // 同步好友名到已有会话（此前仅有 uid 的占位名）
+      for (const f of this.friends) {
+        const conv = this.conversations.find((c) => c.uid === f.uid)
+        if (conv && conv.name === conv.uid) conv.name = f.name
+      }
+    },
+
+    loadConversations(list) {
+      for (const c of list || []) {
+        if (!c.peer) continue
+        const friend = this.friends.find((f) => f.uid === c.peer)
+        const conv = this.ensureConversation(c.peer, friend ? friend.name : undefined)
+        const t = parseTime(c.time)
+        if (!conv.time || t >= conv.time) {
+          conv.last = c.content || conv.last
+          conv.time = t
+        }
+      }
     },
 
     ensureConversation(uid, name) {
@@ -142,6 +169,7 @@ export const useChatStore = defineStore('chat', {
       this.messages = {}
       this.activeUid = ''
       this.connected = false
+      this.friends = []
     },
   },
 })

@@ -13,6 +13,8 @@ export const api = {
   updateProfile: (token, profile) => AuthService.UpdateProfile(token, profile),
   changePassword: (token, oldPwd, newPwd) =>
     AuthService.ChangePassword(token, oldPwd, newPwd),
+  getFriends: (token) => AuthService.GetFriends(token),
+  getConversations: (token) => AuthService.GetConversations(token),
 
   // ---- TCP 实时 (ChatService) ----
   connect: () => ChatService.Connect(TCP_ADDR),

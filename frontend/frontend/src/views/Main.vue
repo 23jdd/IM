@@ -47,6 +47,21 @@ async function connectFlow() {
   }
 }
 
+async function loadInitialData() {
+  try {
+    const friends = await api.getFriends(user.token)
+    chat.setFriends(friends || [])
+  } catch (e) {
+    /* 好友接口失败不阻断 */
+  }
+  try {
+    const convs = await api.getConversations(user.token)
+    chat.loadConversations(convs || [])
+  } catch (e) {
+    /* 会话接口失败不阻断 */
+  }
+}
+
 function onChangeView(v) {
   activeView.value = v
 }
@@ -88,6 +103,7 @@ onMounted(() => {
   chat.init(user.uid)
   bindEvents()
   connectFlow()
+  loadInitialData()
 })
 
 onUnmounted(() => {
