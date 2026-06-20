@@ -13,6 +13,7 @@ var assets embed.FS
 func main() {
 	chat := NewChatService()
 	auth := NewAuthService()
+	local := NewLocalStore()
 
 	app := application.New(application.Options{
 		Name:        "WeChatIM",
@@ -20,6 +21,7 @@ func main() {
 		Services: []application.Service{
 			application.NewService(chat),
 			application.NewService(auth),
+			application.NewService(local),
 		},
 		Assets: application.AssetOptions{
 			Handler: application.AssetFileServerFS(assets),

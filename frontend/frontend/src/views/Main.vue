@@ -82,6 +82,30 @@ async function handleNotify(d) {
       message: `${d.from_uid || ''} 在群聊里@了你`,
       type: 'warning',
     })
+  } else if (d.event === 'group_join_request') {
+    ElNotification({
+      title: '入群申请',
+      message: `${d.from_uid || ''} 申请加入你的群聊，请在群成员里审批`,
+      type: 'info',
+    })
+  } else if (d.event === 'group_join_approved') {
+    try {
+      const groups = await api.groupList(user.token)
+      chat.loadGroups(groups || [])
+    } catch (e) {
+      /* ignore */
+    }
+    ElNotification({
+      title: '加群成功',
+      message: '群主已通过你的入群申请',
+      type: 'success',
+    })
+  } else if (d.event === 'group_join_rejected') {
+    ElNotification({
+      title: '加群被拒绝',
+      message: '群主拒绝了你的入群申请',
+      type: 'warning',
+    })
   }
 }
 
@@ -167,9 +191,14 @@ function cleanup() {
   unsubs = []
 }
 
-onMounted(() => {
+onMounted(async () => {
   chat.init(user.uid)
   bindEvents()
+  try {
+    await api.localInit(user.uid)
+  } catch (e) {
+    /* 本地库不可用不阻断 */
+  }
   connectFlow()
   loadInitialData()
 })

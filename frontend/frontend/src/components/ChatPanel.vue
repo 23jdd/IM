@@ -28,6 +28,7 @@ const scroller = ref(null)
 const membersVisible = ref(false)
 const members = ref([])
 const loadingMembers = ref(false)
+const joinRequests = ref([])
 const roleLabels = { 0: '成员', 1: '管理员', 2: '群主' }
 const inviteUid = ref('')
 const inviting = ref(false)
@@ -183,10 +184,46 @@ async function showMembers() {
   try {
     members.value = (await api.groupMembers(user.token, c.uid)) || []
     membersVisible.value = true
+    // 群主拉取入群申请
+    const me = members.value.find((m) => m.uid === user.uid)
+    if (me && me.role === 2) {
+      try {
+        joinRequests.value = (await api.groupJoinRequests(user.token, c.uid)) || []
+      } catch (e) {
+        joinRequests.value = []
+      }
+    } else {
+      joinRequests.value = []
+    }
   } catch (e) {
     ElMessage.error('获取成员失败：' + String(e?.message || e))
   } finally {
     loadingMembers.value = false
+  }
+}
+
+async function approveJoin(req) {
+  const c = conv.value
+  if (!c) return
+  try {
+    await api.groupApprove(user.token, c.uid, req.uid)
+    joinRequests.value = joinRequests.value.filter((r) => r.uid !== req.uid)
+    members.value = (await api.groupMembers(user.token, c.uid)) || []
+    ElMessage.success('已通过')
+  } catch (e) {
+    ElMessage.error(String(e?.message || e))
+  }
+}
+
+async function rejectJoin(req) {
+  const c = conv.value
+  if (!c) return
+  try {
+    await api.groupReject(user.token, c.uid, req.uid)
+    joinRequests.value = joinRequests.value.filter((r) => r.uid !== req.uid)
+    ElMessage.success('已拒绝')
+  } catch (e) {
+    ElMessage.error(String(e?.message || e))
   }
 }
 
@@ -353,6 +390,17 @@ function onKeydown(e) {
       </div>
 
       <el-dialog v-model="membersVisible" title="群成员" width="320px" align-center>
+        <div v-if="joinRequests.length" class="join-reqs">
+          <div class="jr-title">入群申请 ({{ joinRequests.length }})</div>
+          <div v-for="req in joinRequests" :key="req.uid" class="jr-row">
+            <Avatar :uid="req.uid" :name="req.uid" :size="30" />
+            <span class="jr-uid">{{ req.uid }}</span>
+            <el-button size="small" type="primary" color="#07c160" @click="approveJoin(req)">
+              通过
+            </el-button>
+            <el-button size="small" @click="rejectJoin(req)">拒绝</el-button>
+          </div>
+        </div>
         <div v-for="mem in members" :key="mem.uid" class="member-row">
           <Avatar :uid="mem.uid" :name="mem.nickname || mem.uid" :size="34" />
           <div class="member-info">
@@ -596,6 +644,30 @@ function onKeydown(e) {
   color: var(--wx-text-sub);
   font-size: 12px;
   padding: 20px;
+}
+.join-reqs {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--wx-border);
+}
+.jr-title {
+  font-size: 12px;
+  color: var(--wx-text-sub);
+  margin-bottom: 6px;
+}
+.jr-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+.jr-uid {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .invite-box {
   display: flex;

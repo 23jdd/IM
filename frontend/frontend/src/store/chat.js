@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { parseFileMsg } from '../utils/filemsg'
+import { api } from '../api'
 
 let _mid = 0
 function nextId() {
@@ -121,6 +122,9 @@ export const useChatStore = defineStore('chat', {
       this.activeUid = uid
       const conv = this.conversations.find((c) => c.uid === uid)
       if (conv) conv.unread = 0
+      if (!this.messages[uid] || this.messages[uid].length === 0) {
+        this.loadHistory(uid)
+      }
     },
 
     _touch(uid, content, time, incrUnread) {
@@ -136,6 +140,46 @@ export const useChatStore = defineStore('chat', {
     _push(uid, msg) {
       if (!this.messages[uid]) this.messages[uid] = []
       this.messages[uid].push(msg)
+      this._persist(uid, msg)
+    },
+
+    _persist(uid, msg) {
+      if (!uid || uid === '__unknown__') return
+      const fromUid = msg.self ? this.selfUid : uid
+      try {
+        api
+          .localSave(
+            uid,
+            String(msg.id || ''),
+            fromUid,
+            msg.content || '',
+            !!msg.self,
+            msg.status || '',
+            msg.time || Date.now()
+          )
+          .catch(() => {})
+      } catch {
+        /* ignore */
+      }
+    },
+
+    async loadHistory(uid) {
+      if (!uid || uid === '__unknown__') return
+      if (this.messages[uid] && this.messages[uid].length) return
+      try {
+        const rows = await api.localLoad(uid, 200)
+        if (!rows || !rows.length) return
+        if (this.messages[uid] && this.messages[uid].length) return
+        this.messages[uid] = rows.map((r) => ({
+          id: r.msg_id || nextId(),
+          content: r.content,
+          time: r.ts,
+          self: r.self,
+          status: r.status || (r.self ? 'sent' : 'recv'),
+        }))
+      } catch {
+        /* ignore */
+      }
     },
 
     // 本地发出的消息

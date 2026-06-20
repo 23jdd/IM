@@ -29,7 +29,7 @@ const loading = ref(false)
 const form = ref({ uid: '', name: '', groupName: '', desc: '', groupId: '' })
 
 const dialogTitle = computed(() =>
-  mode.value === 'create' ? '创建群聊' : '加入群聊'
+  mode.value === 'create' ? '创建群聊' : '申请加群'
 )
 
 function openDialog(m) {
@@ -60,7 +60,7 @@ async function confirm() {
     return
   }
 
-  // join
+  // join request（需群主审批）
   const gid = form.value.groupId.trim()
   if (!gid) {
     ElMessage.warning('请输入群号')
@@ -69,9 +69,7 @@ async function confirm() {
   loading.value = true
   try {
     await api.groupJoin(user.token, gid)
-    chat.ensureConversation(gid, '群聊 ' + gid, true)
-    chat.setActive(gid)
-    ElMessage.success('已加入群聊')
+    ElMessage.success('申请已发送，等待群主同意')
     dialogVisible.value = false
   } catch (e) {
     ElMessage.error(String(e?.message || e))
@@ -100,7 +98,7 @@ function select(uid) {
         <template #dropdown>
           <el-dropdown-menu>
             <el-dropdown-item command="create">创建群聊</el-dropdown-item>
-            <el-dropdown-item command="join">加入群聊</el-dropdown-item>
+            <el-dropdown-item command="join">申请加群</el-dropdown-item>
           </el-dropdown-menu>
         </template>
       </el-dropdown>

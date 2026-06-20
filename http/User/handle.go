@@ -172,7 +172,56 @@ func JoinGroup(c *gin.Context) {
 		fail(c, -1, err.Error())
 		return
 	}
-	if err := service.JoinGroup(c.Request.Context(), req.GroupId, uid); err != nil {
+	if err := service.RequestJoinGroup(c.Request.Context(), req.GroupId, uid); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, nil)
+}
+
+func GroupJoinRequests(c *gin.Context) {
+	uid := c.GetString("uid")
+	groupId := c.Query("group_id")
+	if groupId == "" {
+		fail(c, -1, "group_id required")
+		return
+	}
+	resp, err := service.GetGroupJoinRequests(c.Request.Context(), groupId, uid)
+	if err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, resp)
+}
+
+func ApproveJoin(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		GroupId string `json:"group_id" binding:"required"`
+		Uid     string `json:"uid" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	if err := service.ApproveJoinRequest(c.Request.Context(), req.GroupId, uid, req.Uid); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, nil)
+}
+
+func RejectJoin(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		GroupId string `json:"group_id" binding:"required"`
+		Uid     string `json:"uid" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	if err := service.RejectJoinRequest(c.Request.Context(), req.GroupId, uid, req.Uid); err != nil {
 		fail(c, -1, err.Error())
 		return
 	}

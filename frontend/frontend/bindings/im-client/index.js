@@ -4,9 +4,11 @@
 
 import * as AuthService from "./authservice.js";
 import * as ChatService from "./chatservice.js";
+import * as LocalStore from "./localstore.js";
 export {
     AuthService,
-    ChatService
+    ChatService,
+    LocalStore
 };
 
 export {
@@ -14,7 +16,9 @@ export {
     FriendInfo,
     FriendRequestInfo,
     GroupBrief,
+    GroupJoinRequestInfo,
     GroupMemberInfo,
+    LocalMessage,
     LoginResult,
     MomentCommentInfo,
     MomentInfo,

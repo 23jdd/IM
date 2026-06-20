@@ -1,4 +1,4 @@
-import { AuthService, ChatService } from '../../bindings/im-client'
+import { AuthService, ChatService, LocalStore } from '../../bindings/im-client'
 import { Events } from '@wailsio/runtime'
 
 // 后端 TCP 地址（网关 :8000 或直连 :9000）。
@@ -43,6 +43,12 @@ export const api = {
   groupMembers: (token, groupId) => AuthService.GroupMembers(token, groupId),
   groupInvite: (token, groupId, friendUid) =>
     AuthService.GroupInvite(token, groupId, friendUid),
+  groupJoinRequests: (token, groupId) =>
+    AuthService.GroupJoinRequests(token, groupId),
+  groupApprove: (token, groupId, applicantUid) =>
+    AuthService.GroupApprove(token, groupId, applicantUid),
+  groupReject: (token, groupId, applicantUid) =>
+    AuthService.GroupReject(token, groupId, applicantUid),
 
   // ---- TCP 实时 (ChatService) ----
   connect: () => ChatService.Connect(TCP_ADDR),
@@ -52,6 +58,12 @@ export const api = {
     ChatService.SendGroupText(groupId, content, mentions || []),
   sync: () => ChatService.Sync(),
   disconnect: () => ChatService.Disconnect(),
+
+  // ---- 本地 SQLite (LocalStore) ----
+  localInit: (uid) => LocalStore.Init(uid),
+  localSave: (peer, msgId, fromUid, content, self, status, ts) =>
+    LocalStore.SaveMessage(peer, msgId, fromUid, content, self, status, ts),
+  localLoad: (peer, limit) => LocalStore.LoadMessages(peer, limit),
 }
 
 // 监听后端推送事件，返回取消订阅函数。

@@ -152,3 +152,135 @@ func TestInviteToGroupAlreadyMember(t *testing.T) {
 		t.Error("insertGroupMember must not be called when target already a member")
 	}
 }
+
+func TestRequestJoinGroupNotifiesOwner(t *testing.T) {
+	origMembers := findGroupMembers
+	origGroup := findGroup
+	origReq := insertJoinRequest
+	defer func() {
+		findGroupMembers = origMembers
+		findGroup = origGroup
+		insertJoinRequest = origReq
+		SetNotifier(nil)
+	}()
+
+	findGroupMembers = func(ctx context.Context, groupId string) ([]*model.GroupMember, error) {
+		return []*model.GroupMember{{Uid: "owner"}}, nil
+	}
+	findGroup = func(ctx context.Context, groupId string) (*model.GroupInfo, error) {
+		return &model.GroupInfo{GroupId: groupId, OwnerUid: "owner"}, nil
+	}
+	reqInserted := false
+	insertJoinRequest = func(ctx context.Context, groupId, uid string) error {
+		reqInserted = true
+		return nil
+	}
+	var notifyUid string
+	var payload map[string]any
+	SetNotifier(func(toUid string, p []byte) {
+		notifyUid = toUid
+		_ = json.Unmarshal(p, &payload)
+	})
+
+	if err := RequestJoinGroup(context.Background(), "g1", "applicant"); err != nil {
+		t.Fatal(err)
+	}
+	if !reqInserted {
+		t.Error("join request should be inserted")
+	}
+	if notifyUid != "owner" {
+		t.Errorf("notify target = %s, want owner", notifyUid)
+	}
+	if payload["event"] != "group_join_request" || payload["from_uid"] != "applicant" {
+		t.Errorf("unexpected notify payload: %+v", payload)
+	}
+}
+
+func TestRequestJoinGroupAlreadyMember(t *testing.T) {
+	origMembers := findGroupMembers
+	origReq := insertJoinRequest
+	defer func() { findGroupMembers = origMembers; insertJoinRequest = origReq }()
+
+	findGroupMembers = func(ctx context.Context, groupId string) ([]*model.GroupMember, error) {
+		return []*model.GroupMember{{Uid: "applicant"}}, nil
+	}
+	reqInserted := false
+	insertJoinRequest = func(ctx context.Context, groupId, uid string) error {
+		reqInserted = true
+		return nil
+	}
+
+	if err := RequestJoinGroup(context.Background(), "g1", "applicant"); err == nil {
+		t.Fatal("expected error when already a member")
+	}
+	if reqInserted {
+		t.Error("join request must not be inserted when already a member")
+	}
+}
+
+func TestApproveJoinByOwner(t *testing.T) {
+	origGroup := findGroup
+	origIns := insertGroupMember
+	origDel := deleteJoinRequest
+	defer func() {
+		findGroup = origGroup
+		insertGroupMember = origIns
+		deleteJoinRequest = origDel
+		SetNotifier(nil)
+	}()
+
+	findGroup = func(ctx context.Context, groupId string) (*model.GroupInfo, error) {
+		return &model.GroupInfo{GroupId: groupId, OwnerUid: "owner"}, nil
+	}
+	var added *model.GroupMember
+	insertGroupMember = func(ctx context.Context, m *model.GroupMember) error {
+		added = m
+		return nil
+	}
+	delCalled := false
+	deleteJoinRequest = func(ctx context.Context, groupId, uid string) error {
+		delCalled = true
+		return nil
+	}
+	var notifyUid string
+	var payload map[string]any
+	SetNotifier(func(toUid string, p []byte) {
+		notifyUid = toUid
+		_ = json.Unmarshal(p, &payload)
+	})
+
+	if err := ApproveJoinRequest(context.Background(), "g1", "owner", "applicant"); err != nil {
+		t.Fatal(err)
+	}
+	if added == nil || added.Uid != "applicant" || added.GroupId != "g1" {
+		t.Errorf("member not added correctly: %+v", added)
+	}
+	if !delCalled {
+		t.Error("join request should be deleted after approval")
+	}
+	if notifyUid != "applicant" || payload["event"] != "group_join_approved" {
+		t.Errorf("unexpected notify: uid=%s payload=%+v", notifyUid, payload)
+	}
+}
+
+func TestApproveJoinByNonOwnerRejected(t *testing.T) {
+	origGroup := findGroup
+	origIns := insertGroupMember
+	defer func() { findGroup = origGroup; insertGroupMember = origIns }()
+
+	findGroup = func(ctx context.Context, groupId string) (*model.GroupInfo, error) {
+		return &model.GroupInfo{GroupId: groupId, OwnerUid: "owner"}, nil
+	}
+	insCalled := false
+	insertGroupMember = func(ctx context.Context, m *model.GroupMember) error {
+		insCalled = true
+		return nil
+	}
+
+	if err := ApproveJoinRequest(context.Background(), "g1", "intruder", "applicant"); err == nil {
+		t.Fatal("expected error when non-owner approves")
+	}
+	if insCalled {
+		t.Error("member must not be added when non-owner approves")
+	}
+}

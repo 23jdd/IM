@@ -183,6 +183,55 @@ export class GroupBrief {
     }
 }
 
+export class GroupJoinRequestInfo {
+    /**
+     * Creates a new GroupJoinRequestInfo instance.
+     * @param {Partial<GroupJoinRequestInfo>} [$$source = {}] - The source object to create the GroupJoinRequestInfo.
+     */
+    constructor($$source = {}) {
+        if (!("uid" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["uid"] = "";
+        }
+        if (!("group_id" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["group_id"] = "";
+        }
+        if (!("status" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["status"] = 0;
+        }
+        if (!("created_at" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["created_at"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GroupJoinRequestInfo instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {GroupJoinRequestInfo}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new GroupJoinRequestInfo(/** @type {Partial<GroupJoinRequestInfo>} */($$parsedSource));
+    }
+}
+
 export class GroupMemberInfo {
     /**
      * Creates a new GroupMemberInfo instance.
@@ -222,6 +271,69 @@ export class GroupMemberInfo {
     static createFrom($$source = {}) {
         let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
         return new GroupMemberInfo(/** @type {Partial<GroupMemberInfo>} */($$parsedSource));
+    }
+}
+
+export class LocalMessage {
+    /**
+     * Creates a new LocalMessage instance.
+     * @param {Partial<LocalMessage>} [$$source = {}] - The source object to create the LocalMessage.
+     */
+    constructor($$source = {}) {
+        if (!("msg_id" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["msg_id"] = "";
+        }
+        if (!("from_uid" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["from_uid"] = "";
+        }
+        if (!("content" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["content"] = "";
+        }
+        if (!("self" in $$source)) {
+            /**
+             * @member
+             * @type {boolean}
+             */
+            this["self"] = false;
+        }
+        if (!("status" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["status"] = "";
+        }
+        if (!("ts" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["ts"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new LocalMessage instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {LocalMessage}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new LocalMessage(/** @type {Partial<LocalMessage>} */($$parsedSource));
     }
 }
 

@@ -87,3 +87,30 @@ func FindUserGroupsWithInfo(ctx context.Context, uid string) ([]*model.GroupBrie
 	}
 	return items, nil
 }
+
+// InsertJoinRequest 写入一条入群申请（重复申请重置为待审批）。
+func InsertJoinRequest(ctx context.Context, groupId, uid string) error {
+	query := `INSERT INTO group_join_request (group_id, uid, status) VALUES (?, ?, 0)
+	          ON DUPLICATE KEY UPDATE status = 0`
+	_, err := groupConn.ExecCtx(ctx, query, groupId, uid)
+	return err
+}
+
+// FindPendingJoinRequests 返回某群待审批的入群申请。
+func FindPendingJoinRequests(ctx context.Context, groupId string) ([]*model.GroupJoinRequest, error) {
+	query := `SELECT id, group_id, uid, status, created_at
+	          FROM group_join_request WHERE group_id = ? AND status = 0`
+	var items []*model.GroupJoinRequest
+	err := groupConn.QueryRowsCtx(ctx, &items, query, groupId)
+	if err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+// DeleteJoinRequest 删除某条入群申请（审批后调用）。
+func DeleteJoinRequest(ctx context.Context, groupId, uid string) error {
+	query := `DELETE FROM group_join_request WHERE group_id = ? AND uid = ?`
+	_, err := groupConn.ExecCtx(ctx, query, groupId, uid)
+	return err
+}

@@ -56,6 +56,9 @@ func (s *Server) Start() {
 			auth.GET("/group/members", User.GetGroupMembers)
 			auth.POST("/group/join", User.JoinGroup)
 			auth.POST("/group/invite", User.InviteToGroup)
+			auth.GET("/group/requests", User.GroupJoinRequests)
+			auth.POST("/group/approve", User.ApproveJoin)
+			auth.POST("/group/reject", User.RejectJoin)
 		}
 	}
 

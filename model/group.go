@@ -38,3 +38,12 @@ type GroupBrief struct {
 	GroupId string `db:"group_id" json:"group_id"`
 	Name    string `db:"name" json:"name"`
 }
+
+// GroupJoinRequest 是入群申请（待群主审批）。
+type GroupJoinRequest struct {
+	Id        uint64    `db:"id" json:"id"`
+	GroupId   string    `db:"group_id" json:"group_id"`
+	Uid       string    `db:"uid" json:"uid"`
+	Status    byte      `db:"status" json:"status"`
+	CreatedAt time.Time `db:"created_at" json:"created_at"`
+}

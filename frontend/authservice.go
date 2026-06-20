@@ -283,6 +283,38 @@ func (a *AuthService) GroupInvite(token, groupId, friendUid string) error {
 	}, nil)
 }
 
+type GroupJoinRequestInfo struct {
+	Uid       string `json:"uid"`
+	GroupId   string `json:"group_id"`
+	Status    int    `json:"status"`
+	CreatedAt string `json:"created_at"`
+}
+
+// GroupJoinRequests 群主查看某群的待审批入群申请。
+func (a *AuthService) GroupJoinRequests(token, groupId string) ([]GroupJoinRequestInfo, error) {
+	var out []GroupJoinRequestInfo
+	if err := a.do(http.MethodGet, "/api/group/requests?group_id="+url.QueryEscape(groupId), token, nil, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// GroupApprove 群主通过入群申请。
+func (a *AuthService) GroupApprove(token, groupId, applicantUid string) error {
+	return a.do(http.MethodPost, "/api/group/approve", token, map[string]string{
+		"group_id": groupId,
+		"uid":      applicantUid,
+	}, nil)
+}
+
+// GroupReject 群主拒绝入群申请。
+func (a *AuthService) GroupReject(token, groupId, applicantUid string) error {
+	return a.do(http.MethodPost, "/api/group/reject", token, map[string]string{
+		"group_id": groupId,
+		"uid":      applicantUid,
+	}, nil)
+}
+
 type GroupMemberInfo struct {
 	Uid      string `json:"uid"`
 	Role     int    `json:"role"`
