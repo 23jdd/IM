@@ -1,0 +1,179 @@
+package main
+
+import (
+	"encoding/json"
+	"errors"
+	"io"
+	"net"
+	"sync"
+	"sync/atomic"
+	"time"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
+)
+
+// ChatService 是前端与后端 TCP 长连接之间的桥接层。
+// 前端通过绑定调用其方法收发实时消息，后端推送的消息以事件形式发给前端。
+type ChatService struct {
+	app  *application.App
+	mu   sync.Mutex
+	conn net.Conn
+	key  uint32
+
+	connectedMu sync.RWMutex
+	connected   bool
+}
+
+func NewChatService() *ChatService {
+	return &ChatService{}
+}
+
+func (s *ChatService) SetApp(app *application.App) {
+	s.app = app
+}
+
+func (s *ChatService) emit(name string, data any) {
+	if s.app != nil {
+		s.app.Event.Emit(name, data)
+	}
+}
+
+func (s *ChatService) nextKey() uint32 {
+	return atomic.AddUint32(&s.key, 1) & 0xFFFFFF
+}
+
+func (s *ChatService) isConnected() bool {
+	s.connectedMu.RLock()
+	defer s.connectedMu.RUnlock()
+	return s.connected
+}
+
+func (s *ChatService) setConnected(v bool) {
+	s.connectedMu.Lock()
+	s.connected = v
+	s.connectedMu.Unlock()
+}
+
+// Connect 拨号连接后端 TCP 服务（网关 :8000 或直连 :9000）。
+func (s *ChatService) Connect(addr string) error {
+	if s.isConnected() {
+		return nil
+	}
+	if addr == "" {
+		addr = "127.0.0.1:9000"
+	}
+	conn, err := net.DialTimeout("tcp", addr, 5*time.Second)
+	if err != nil {
+		s.emit("im:status", "error:"+err.Error())
+		return err
+	}
+	s.mu.Lock()
+	s.conn = conn
+	s.mu.Unlock()
+	s.setConnected(true)
+	s.emit("im:status", "connected")
+
+	go s.readLoop(conn)
+	return nil
+}
+
+// Disconnect 主动断开连接。
+func (s *ChatService) Disconnect() {
+	s.mu.Lock()
+	conn := s.conn
+	s.conn = nil
+	s.mu.Unlock()
+	if conn != nil {
+		_ = conn.Close()
+	}
+	s.setConnected(false)
+}
+
+func (s *ChatService) write(t byte, key uint32, data []byte) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.conn == nil {
+		return errors.New("not connected")
+	}
+	_, err := s.conn.Write(encodeFrame(t, key, data))
+	return err
+}
+
+// Auth 发送 JWT 认证帧。
+func (s *ChatService) Auth(token string) error {
+	return s.write(msgAuth, s.nextKey(), []byte(token))
+}
+
+// SendText 发送单聊文本消息，body 为 {to_uid, content} 的 JSON。
+// 返回本条消息的 key，前端可用其匹配后续的 ack/nack。
+func (s *ChatService) SendText(toUid, content string) (uint32, error) {
+	payload, _ := json.Marshal(map[string]string{
+		"to_uid":  toUid,
+		"content": content,
+	})
+	key := s.nextKey()
+	if err := s.write(msgText, key, payload); err != nil {
+		return 0, err
+	}
+	return key, nil
+}
+
+// Sync 触发离线消息同步（发送 Json 帧）。
+func (s *ChatService) Sync() error {
+	return s.write(msgJson, s.nextKey(), []byte("{}"))
+}
+
+func (s *ChatService) readLoop(conn net.Conn) {
+	head := make([]byte, headSize)
+	for {
+		if _, err := io.ReadFull(conn, head); err != nil {
+			break
+		}
+		t, key, bodyLen, err := parseHeader(head)
+		if err != nil {
+			break
+		}
+		var body []byte
+		if bodyLen > 0 {
+			body = make([]byte, bodyLen)
+			if _, err := io.ReadFull(conn, body); err != nil {
+				break
+			}
+		}
+		s.dispatch(t, key, body)
+	}
+
+	s.setConnected(false)
+	s.mu.Lock()
+	if s.conn == conn {
+		s.conn = nil
+	}
+	s.mu.Unlock()
+	_ = conn.Close()
+	s.emit("im:status", "disconnected")
+}
+
+func (s *ChatService) dispatch(t byte, key uint32, body []byte) {
+	switch t {
+	case msgACK:
+		s.emit("im:ack", map[string]any{"key": key})
+	case msgNack:
+		s.emit("im:nack", map[string]any{"key": key})
+	case msgText:
+		// 后端路由的实时文本帧 body 仅为内容本身（无 from_uid）。
+		s.emit("im:text", map[string]any{
+			"key":     key,
+			"content": string(body),
+		})
+	case msgBlob:
+		// 离线同步：每个 blob 为一条 ChatMessage 的 JSON。
+		var m map[string]any
+		if err := json.Unmarshal(body, &m); err == nil {
+			s.emit("im:offline", m)
+		}
+	case msgHeartBeat:
+		// 心跳，忽略。
+	default:
+		s.emit("im:blob", map[string]any{"type": t, "content": string(body)})
+	}
+}

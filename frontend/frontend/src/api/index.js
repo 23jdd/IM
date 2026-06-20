@@ -1,0 +1,36 @@
+import { AuthService, ChatService } from '../../bindings/im-client'
+import { Events } from '@wailsio/runtime'
+
+// 后端 TCP 地址（网关 :8000 或直连 :9000）。
+const TCP_ADDR = '127.0.0.1:9000'
+
+export const api = {
+  // ---- HTTP (AuthService) ----
+  login: (uid, password) => AuthService.Login(uid, password),
+  register: (name, password, email, phone) =>
+    AuthService.Register(name, password, email, phone),
+  getProfile: (token) => AuthService.GetProfile(token),
+  updateProfile: (token, profile) => AuthService.UpdateProfile(token, profile),
+  changePassword: (token, oldPwd, newPwd) =>
+    AuthService.ChangePassword(token, oldPwd, newPwd),
+
+  // ---- TCP 实时 (ChatService) ----
+  connect: () => ChatService.Connect(TCP_ADDR),
+  authTcp: (token) => ChatService.Auth(token),
+  sendText: (toUid, content) => ChatService.SendText(toUid, content),
+  sync: () => ChatService.Sync(),
+  disconnect: () => ChatService.Disconnect(),
+}
+
+// 监听后端推送事件，返回取消订阅函数。
+export function onEvent(name, cb) {
+  return Events.On(name, (e) => cb(e.data))
+}
+
+export const EVT = {
+  STATUS: 'im:status',
+  TEXT: 'im:text',
+  OFFLINE: 'im:offline',
+  ACK: 'im:ack',
+  NACK: 'im:nack',
+}

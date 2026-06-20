@@ -1,0 +1,153 @@
+<script setup>
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import SideNav from '../components/SideNav.vue'
+import ConversationList from '../components/ConversationList.vue'
+import ContactsPanel from '../components/ContactsPanel.vue'
+import ChatPanel from '../components/ChatPanel.vue'
+import ProfileDialog from '../components/ProfileDialog.vue'
+import { api, onEvent, EVT } from '../api'
+import { useUserStore } from '../store/user'
+import { useChatStore } from '../store/chat'
+
+const router = useRouter()
+const user = useUserStore()
+const chat = useChatStore()
+
+const activeView = ref('chats')
+const profileVisible = ref(false)
+
+let unsubs = []
+
+function bindEvents() {
+  unsubs.push(
+    onEvent(EVT.STATUS, (data) => {
+      const ok = data === 'connected'
+      chat.setConnected(ok)
+      if (typeof data === 'string' && data.startsWith('error:')) {
+        ElMessage.error('连接错误：' + data.slice(6))
+      }
+    })
+  )
+  unsubs.push(onEvent(EVT.TEXT, (d) => chat.receiveText(d?.content || '')))
+  unsubs.push(onEvent(EVT.OFFLINE, (d) => chat.receiveOffline(d || {})))
+  unsubs.push(onEvent(EVT.ACK, (d) => chat.markStatus(Number(d?.key), 'sent')))
+  unsubs.push(onEvent(EVT.NACK, (d) => chat.markStatus(Number(d?.key), 'failed')))
+}
+
+async function connectFlow() {
+  try {
+    await api.connect()
+    await api.authTcp(user.token)
+    // TCP 有序：认证帧先于同步帧被服务端处理，稍后拉取离线消息。
+    setTimeout(() => api.sync().catch(() => {}), 300)
+  } catch (e) {
+    ElMessage.error('连接服务器失败：' + String(e?.message || e))
+  }
+}
+
+function onChangeView(v) {
+  activeView.value = v
+}
+
+function onOpenChat(uid) {
+  chat.setActive(uid)
+  activeView.value = 'chats'
+}
+
+async function onLogout() {
+  try {
+    await ElMessageBox.confirm('确定要退出登录吗？', '提示', {
+      confirmButtonText: '退出',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  cleanup()
+  api.disconnect()
+  chat.reset()
+  user.logout()
+  router.replace('/login')
+}
+
+function cleanup() {
+  unsubs.forEach((u) => {
+    try {
+      u && u()
+    } catch {
+      /* ignore */
+    }
+  })
+  unsubs = []
+}
+
+onMounted(() => {
+  chat.init(user.uid)
+  bindEvents()
+  connectFlow()
+})
+
+onUnmounted(() => {
+  cleanup()
+})
+</script>
+
+<template>
+  <div class="wx-shell">
+    <SideNav
+      :active-view="activeView"
+      :connected="chat.connected"
+      :name="user.name"
+      :uid="user.uid"
+      @change-view="onChangeView"
+      @open-profile="profileVisible = true"
+      @logout="onLogout"
+    />
+
+    <div class="list-col">
+      <ConversationList v-show="activeView === 'chats'" />
+      <ContactsPanel v-show="activeView === 'contacts'" @open-chat="onOpenChat" />
+    </div>
+
+    <ChatPanel class="main-col" />
+
+    <ProfileDialog v-model="profileVisible" />
+  </div>
+</template>
+
+<style scoped>
+.wx-shell {
+  display: flex;
+  height: 100%;
+  background: var(--wx-bg);
+}
+.list-col {
+  width: 280px;
+  flex-shrink: 0;
+  background: var(--wx-list-bg);
+  border-right: 1px solid var(--wx-border);
+  height: 100%;
+  overflow: hidden;
+}
+.list-col > * {
+  height: 100%;
+}
+.main-col {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (max-width: 820px) {
+  .list-col {
+    width: 230px;
+  }
+}
+@media (max-width: 640px) {
+  .list-col {
+    width: 180px;
+  }
+}
+</style>

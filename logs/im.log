@@ -1,0 +1,3 @@
+{"level":"info","time":"2026-06-20T10:29:51.038+0800","caller":"log/init.go:61","msg":"starting IM server"}
+{"level":"warn","time":"2026-06-20T10:29:52.795+0800","caller":"log/init.go:69","msg":"redis init failed","error":"dial tcp 127.0.0.1:6379: connectex: No connection could be made because the target machine actively refused it."}
+{"level":"info","time":"2026-06-20T10:29:53.375+0800","caller":"log/init.go:61","msg":"all services started"}

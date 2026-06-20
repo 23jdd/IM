@@ -31,3 +31,8 @@ go.work.sum
 .idea/
 mysql/sql/*.sql
 # .vscode/
+frontend/.task
+frontend/bin
+frontend/frontend/dist
+frontend/frontend/node_modules
+frontend/build
