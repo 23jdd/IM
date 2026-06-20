@@ -1,10 +1,19 @@
 <script setup>
-import { ref, computed, nextTick, watch } from 'vue'
+import { ref, reactive, computed, nextTick, watch } from 'vue'
 import { ElMessage } from 'element-plus'
-import { Promotion, ChatLineRound, WarningFilled, Loading } from '@element-plus/icons-vue'
+import {
+  Promotion,
+  ChatLineRound,
+  WarningFilled,
+  Loading,
+  Picture,
+  Document,
+  Download,
+} from '@element-plus/icons-vue'
 import { useChatStore } from '../store/chat'
 import { useUserStore } from '../store/user'
 import { api } from '../api'
+import { buildFileMsg, parseFileMsg, humanSize } from '../utils/filemsg'
 import Avatar from './Avatar.vue'
 
 const chat = useChatStore()
@@ -22,6 +31,104 @@ const loadingMembers = ref(false)
 const roleLabels = { 0: '成员', 1: '管理员', 2: '群主' }
 const inviteUid = ref('')
 const inviting = ref(false)
+
+const imgInput = ref(null)
+const fileInput = ref(null)
+const uploadingFile = ref(false)
+const fileUrls = reactive({}) // file_id -> dataUrl（图片消息渲染）
+
+function imageUrl(fileId) {
+  if (fileUrls[fileId] === undefined) {
+    fileUrls[fileId] = ''
+    api
+      .getAvatar(user.token, fileId)
+      .then((u) => {
+        fileUrls[fileId] = u || ''
+      })
+      .catch(() => {
+        fileUrls[fileId] = ''
+      })
+  }
+  return fileUrls[fileId]
+}
+
+function fileOf(content) {
+  return parseFileMsg(content)
+}
+
+function pickImage() {
+  if (imgInput.value) imgInput.value.click()
+}
+function pickFile() {
+  if (fileInput.value) fileInput.value.click()
+}
+
+function readFileAsDataURL(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader()
+    r.onload = () => resolve(r.result)
+    r.onerror = reject
+    r.readAsDataURL(file)
+  })
+}
+
+async function sendFile(kind, file, inputEl) {
+  const c = conv.value
+  if (!c) return
+  if (!chat.connected) {
+    ElMessage.warning('未连接到服务器')
+    return
+  }
+  if (file.size > 10 * 1024 * 1024) {
+    ElMessage.warning('文件不能超过 10MB')
+    return
+  }
+  uploadingFile.value = true
+  try {
+    const dataUrl = await readFileAsDataURL(file)
+    const base64 = dataUrl.split(',')[1] || ''
+    const fileId = await api.uploadFile(
+      user.token,
+      base64,
+      file.type || 'application/octet-stream'
+    )
+    const content = buildFileMsg(kind, fileId, file.name, file.size, file.type)
+    const key = c.isGroup
+      ? await api.sendGroupText(c.uid, content, [])
+      : await api.sendText(c.uid, content)
+    chat.addOutgoing(c.uid, content, Number(key))
+    scrollToBottom()
+  } catch (e) {
+    ElMessage.error('发送失败：' + String(e?.message || e))
+  } finally {
+    uploadingFile.value = false
+    if (inputEl) inputEl.value = ''
+  }
+}
+
+function onImageSelected(e) {
+  const f = e.target.files && e.target.files[0]
+  if (f) sendFile('image', f, e.target)
+}
+function onFileSelected(e) {
+  const f = e.target.files && e.target.files[0]
+  if (f) sendFile('file', f, e.target)
+}
+
+async function downloadFile(fmsg) {
+  try {
+    const dataUrl = await api.getAvatar(user.token, fmsg.file_id)
+    const base64 = (dataUrl || '').split(',')[1] || ''
+    if (!base64) {
+      ElMessage.warning('文件不存在')
+      return
+    }
+    const path = await api.saveFile(fmsg.name || 'download', base64)
+    if (path) ElMessage.success('已保存到：' + path)
+  } catch (e) {
+    ElMessage.error('下载失败：' + String(e?.message || e))
+  }
+}
 
 async function doInvite() {
   const c = conv.value
@@ -170,7 +277,31 @@ function onKeydown(e) {
             :size="38"
           />
           <div class="bubble-wrap">
-            <div class="bubble" :class="{ self: m.self }">{{ m.content }}</div>
+            <template v-if="fileOf(m.content)">
+              <el-image
+                v-if="fileOf(m.content).kind === 'image'"
+                :src="imageUrl(fileOf(m.content).file_id)"
+                :preview-src-list="[imageUrl(fileOf(m.content).file_id)]"
+                fit="cover"
+                class="bubble-img"
+                preview-teleported
+                hide-on-click-modal
+              />
+              <div
+                v-else
+                class="bubble file-card"
+                :class="{ self: m.self }"
+                @click="downloadFile(fileOf(m.content))"
+              >
+                <el-icon :size="28" class="fc-icon"><Document /></el-icon>
+                <div class="fc-info">
+                  <div class="fc-name">{{ fileOf(m.content).name }}</div>
+                  <div class="fc-size">{{ humanSize(fileOf(m.content).size) }}</div>
+                </div>
+                <el-icon class="fc-dl"><Download /></el-icon>
+              </div>
+            </template>
+            <div v-else class="bubble" :class="{ self: m.self }">{{ m.content }}</div>
             <div v-if="m.self && m.status !== 'sent'" class="msg-status">
               <el-icon v-if="m.status === 'sending'" class="spin"><Loading /></el-icon>
               <el-icon v-else-if="m.status === 'failed'" color="#fa5151"><WarningFilled /></el-icon>
@@ -188,7 +319,20 @@ function onKeydown(e) {
           @keydown="onKeydown"
         ></textarea>
         <div class="send-row">
-          <el-button v-if="conv.isGroup" class="at-btn" text @click="openMention">@</el-button>
+          <div class="tools">
+            <el-button
+              class="tool-btn"
+              text
+              :icon="Picture"
+              :loading="uploadingFile"
+              title="发送图片"
+              @click="pickImage"
+            />
+            <el-button class="tool-btn" text :icon="Document" title="发送文件" @click="pickFile" />
+            <el-button v-if="conv.isGroup" class="tool-btn at-btn" text @click="openMention">
+              @
+            </el-button>
+          </div>
           <el-button
             class="send-btn"
             color="#07c160"
@@ -197,6 +341,14 @@ function onKeydown(e) {
           >
             发送
           </el-button>
+          <input
+            ref="imgInput"
+            type="file"
+            accept="image/*"
+            style="display: none"
+            @change="onImageSelected"
+          />
+          <input ref="fileInput" type="file" style="display: none" @change="onFileSelected" />
         </div>
       </div>
 
@@ -380,7 +532,17 @@ function onKeydown(e) {
 }
 .send-row {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+}
+.tools {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.tool-btn {
+  color: var(--wx-text-sub);
+  font-size: 18px;
 }
 .send-btn {
   color: #fff;
@@ -443,9 +605,45 @@ function onKeydown(e) {
   border-top: 1px solid var(--wx-border);
 }
 .at-btn {
-  margin-right: auto;
   font-size: 18px;
   color: var(--wx-text-sub);
+}
+.bubble-img {
+  max-width: 180px;
+  max-height: 200px;
+  border-radius: 5px;
+  cursor: pointer;
+  display: block;
+}
+.file-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 180px;
+  max-width: 240px;
+  cursor: pointer;
+}
+.fc-icon {
+  color: #5b8def;
+  flex-shrink: 0;
+}
+.fc-info {
+  flex: 1;
+  min-width: 0;
+}
+.fc-name {
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.fc-size {
+  font-size: 11px;
+  color: var(--wx-text-sub);
+}
+.fc-dl {
+  color: var(--wx-text-sub);
+  flex-shrink: 0;
 }
 .member-row.pick {
   cursor: pointer;

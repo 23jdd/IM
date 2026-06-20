@@ -445,6 +445,32 @@ func GetUserInfo(c *gin.Context) {
 	ok(c, u)
 }
 
+func UploadFile(c *gin.Context) {
+	var req struct {
+		DataBase64  string `json:"data_base64" binding:"required"`
+		ContentType string `json:"content_type"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	data, err := base64.StdEncoding.DecodeString(req.DataBase64)
+	if err != nil {
+		fail(c, -1, "invalid base64 data")
+		return
+	}
+	ct := req.ContentType
+	if ct == "" {
+		ct = "application/octet-stream"
+	}
+	id, err := service.StoreImage(c.Request.Context(), data, ct)
+	if err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, gin.H{"file_id": id})
+}
+
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		auth := c.GetHeader("Authorization")

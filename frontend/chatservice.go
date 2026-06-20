@@ -1,10 +1,12 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"io"
 	"net"
+	"os"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -135,6 +137,28 @@ func (s *ChatService) SendGroupText(groupId, content string, mentions []string) 
 // Sync 触发离线消息同步（发送 Json 帧）。
 func (s *ChatService) Sync() error {
 	return s.write(msgJson, s.nextKey(), []byte("{}"))
+}
+
+// SaveFile 弹出保存对话框，把 base64 数据写入用户选择的路径，返回保存路径（取消则空串）。
+func (s *ChatService) SaveFile(suggestedName, dataBase64 string) (string, error) {
+	if s.app == nil {
+		return "", errors.New("app not ready")
+	}
+	data, err := base64.StdEncoding.DecodeString(dataBase64)
+	if err != nil {
+		return "", err
+	}
+	path, err := s.app.Dialog.SaveFile().SetFilename(suggestedName).PromptForSingleSelection()
+	if err != nil {
+		return "", err
+	}
+	if path == "" {
+		return "", nil // 用户取消
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		return "", err
+	}
+	return path, nil
 }
 
 func (s *ChatService) readLoop(conn net.Conn) {

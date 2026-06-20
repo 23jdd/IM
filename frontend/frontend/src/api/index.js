@@ -18,6 +18,10 @@ export const api = {
     AuthService.UploadAvatar(token, dataBase64, contentType),
   getAvatar: (token, id) => AuthService.GetAvatar(token, id),
   getAvatarByUid: (token, uid) => AuthService.GetAvatarByUid(token, uid),
+  uploadFile: (token, dataBase64, contentType) =>
+    AuthService.UploadFile(token, dataBase64, contentType),
+  saveFile: (suggestedName, dataBase64) =>
+    ChatService.SaveFile(suggestedName, dataBase64),
   momentPublish: (token, content, images) =>
     AuthService.MomentPublish(token, content, images),
   momentTimeline: (token) => AuthService.MomentTimeline(token),

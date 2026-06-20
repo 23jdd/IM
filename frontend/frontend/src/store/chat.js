@@ -1,9 +1,16 @@
 import { defineStore } from 'pinia'
+import { parseFileMsg } from '../utils/filemsg'
 
 let _mid = 0
 function nextId() {
   _mid += 1
   return `${Date.now()}_${_mid}`
+}
+
+function preview(content) {
+  const f = parseFileMsg(content)
+  if (f) return f.kind === 'image' ? '[图片]' : '[文件]'
+  return content
 }
 
 function parseTime(t) {
@@ -80,9 +87,14 @@ export const useChatStore = defineStore('chat', {
     ensureConversation(uid, name, isGroup) {
       let conv = this.conversations.find((c) => c.uid === uid)
       if (!conv) {
+        let displayName = name
+        if (!displayName && !isGroup) {
+          const f = this.friends.find((x) => x.uid === uid)
+          if (f) displayName = f.name
+        }
         conv = {
           uid,
-          name: name || uid,
+          name: displayName || uid,
           avatar: '',
           last: '',
           time: 0,
@@ -114,7 +126,7 @@ export const useChatStore = defineStore('chat', {
     _touch(uid, content, time, incrUnread) {
       const conv = this.conversations.find((c) => c.uid === uid)
       if (!conv) return
-      conv.last = content
+      conv.last = preview(content)
       conv.time = time
       if (incrUnread && uid !== this.activeUid) {
         conv.unread = (conv.unread || 0) + 1

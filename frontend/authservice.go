@@ -313,6 +313,20 @@ func (a *AuthService) UploadAvatar(token, dataBase64, contentType string) (strin
 	return out.Avatar, nil
 }
 
+// UploadFile 上传任意文件（base64），返回 file_id（复用通用二进制存储，下载经 /api/avatar?id=）。
+func (a *AuthService) UploadFile(token, dataBase64, contentType string) (string, error) {
+	var out struct {
+		FileId string `json:"file_id"`
+	}
+	if err := a.do(http.MethodPost, "/api/file/upload", token, map[string]string{
+		"data_base64":  dataBase64,
+		"content_type": contentType,
+	}, &out); err != nil {
+		return "", err
+	}
+	return out.FileId, nil
+}
+
 // GetAvatar 按 _id 读取头像，返回可直接用于 <img src> 的 data URL（无图返回空串）。
 func (a *AuthService) GetAvatar(token, id string) (string, error) {
 	if id == "" {

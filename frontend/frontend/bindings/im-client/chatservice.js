@@ -43,6 +43,16 @@ export function Disconnect() {
 }
 
 /**
+ * SaveFile 弹出保存对话框，把 base64 数据写入用户选择的路径，返回保存路径（取消则空串）。
+ * @param {string} suggestedName
+ * @param {string} dataBase64
+ * @returns {$CancellablePromise<string>}
+ */
+export function SaveFile(suggestedName, dataBase64) {
+    return $Call.ByID(88012120, suggestedName, dataBase64);
+}
+
+/**
  * SendGroupText 发送群聊文本消息，body 为 {group_id, content, mentions} 的 JSON。
  * @param {string} groupId
  * @param {string} content

@@ -39,6 +39,7 @@ func (s *Server) Start() {
 			auth.POST("/user/avatar", User.UploadAvatar)
 			auth.GET("/avatar", User.GetAvatar)
 			auth.GET("/avatar/by-uid", User.GetAvatarByUid)
+			auth.POST("/file/upload", User.UploadFile)
 			auth.POST("/moment/publish", User.PublishMoment)
 			auth.GET("/moment/timeline", User.GetTimeline)
 			auth.POST("/moment/like", User.LikeMoment)

@@ -149,7 +149,6 @@ onMounted(loadRequests)
         <Avatar :uid="c.uid" :name="c.name" :size="38" />
         <div class="info">
           <div class="name">{{ c.name }}</div>
-          <div class="uid">UID: {{ c.uid }}</div>
         </div>
       </div>
       <div v-if="!contacts.length" class="empty-line">暂无好友</div>

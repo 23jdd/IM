@@ -291,6 +291,17 @@ export function UploadAvatar(token, dataBase64, contentType) {
 }
 
 /**
+ * UploadFile 上传任意文件（base64），返回 file_id（复用通用二进制存储，下载经 /api/avatar?id=）。
+ * @param {string} token
+ * @param {string} dataBase64
+ * @param {string} contentType
+ * @returns {$CancellablePromise<string>}
+ */
+export function UploadFile(token, dataBase64, contentType) {
+    return $Call.ByID(1532823780, token, dataBase64, contentType);
+}
+
+/**
  * UserInfo 按 uid 查询用户公开信息（搜索添加好友前预览）。
  * @param {string} token
  * @param {string} uid
