@@ -290,6 +290,18 @@ export function UploadAvatar(token, dataBase64, contentType) {
     return $Call.ByID(1054061075, token, dataBase64, contentType);
 }
 
+/**
+ * UserInfo 按 uid 查询用户公开信息（搜索添加好友前预览）。
+ * @param {string} token
+ * @param {string} uid
+ * @returns {$CancellablePromise<$models.UserBriefInfo | null>}
+ */
+export function UserInfo(token, uid) {
+    return $Call.ByID(3553672432, token, uid).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType21($result);
+    }));
+}
+
 // Private type creation functions
 const $$createType0 = $models.FriendRequestInfo.createFrom;
 const $$createType1 = $Create.Array($$createType0);
@@ -311,3 +323,5 @@ const $$createType16 = $Create.Nullable($$createType15);
 const $$createType17 = $Create.Array($$createType15);
 const $$createType18 = $models.RegisterResult.createFrom;
 const $$createType19 = $Create.Nullable($$createType18);
+const $$createType20 = $models.UserBriefInfo.createFrom;
+const $$createType21 = $Create.Nullable($$createType20);

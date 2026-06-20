@@ -19,5 +19,6 @@ export {
     MomentCommentInfo,
     MomentInfo,
     Profile,
-    RegisterResult
+    RegisterResult,
+    UserBriefInfo
 } from "./models.js";

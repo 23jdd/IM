@@ -24,12 +24,12 @@ const list = computed(() => {
 })
 
 const dialogVisible = ref(false)
-const mode = ref('single') // 'single' | 'create' | 'join'
+const mode = ref('create') // 'create' | 'join'
 const loading = ref(false)
 const form = ref({ uid: '', name: '', groupName: '', desc: '', groupId: '' })
 
 const dialogTitle = computed(() =>
-  mode.value === 'single' ? '发起单聊' : mode.value === 'create' ? '创建群聊' : '加入群聊'
+  mode.value === 'create' ? '创建群聊' : '加入群聊'
 )
 
 function openDialog(m) {
@@ -39,18 +39,6 @@ function openDialog(m) {
 }
 
 async function confirm() {
-  if (mode.value === 'single') {
-    const uid = form.value.uid.trim()
-    if (!uid) {
-      ElMessage.warning('请输入对方账号(UID)')
-      return
-    }
-    chat.ensureConversation(uid, form.value.name.trim() || uid)
-    chat.setActive(uid)
-    dialogVisible.value = false
-    return
-  }
-
   if (mode.value === 'create') {
     const name = form.value.groupName.trim()
     if (!name) {
@@ -111,7 +99,6 @@ function select(uid) {
         <el-button class="add-btn" :icon="Plus" circle title="新建" />
         <template #dropdown>
           <el-dropdown-menu>
-            <el-dropdown-item command="single">发起单聊</el-dropdown-item>
             <el-dropdown-item command="create">创建群聊</el-dropdown-item>
             <el-dropdown-item command="join">加入群聊</el-dropdown-item>
           </el-dropdown-menu>
@@ -146,16 +133,7 @@ function select(uid) {
 
     <el-dialog v-model="dialogVisible" :title="dialogTitle" width="320px" align-center>
       <el-form label-position="top">
-        <template v-if="mode === 'single'">
-          <el-form-item label="对方账号 (UID)">
-            <el-input v-model="form.uid" placeholder="请输入对方 UID" />
-          </el-form-item>
-          <el-form-item label="备注名 (可选)">
-            <el-input v-model="form.name" placeholder="备注名" />
-          </el-form-item>
-        </template>
-
-        <template v-else-if="mode === 'create'">
+        <template v-if="mode === 'create'">
           <el-form-item label="群名称">
             <el-input v-model="form.groupName" placeholder="请输入群名称" />
           </el-form-item>

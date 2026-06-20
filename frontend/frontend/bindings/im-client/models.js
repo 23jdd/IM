@@ -503,6 +503,48 @@ export class RegisterResult {
     }
 }
 
+export class UserBriefInfo {
+    /**
+     * Creates a new UserBriefInfo instance.
+     * @param {Partial<UserBriefInfo>} [$$source = {}] - The source object to create the UserBriefInfo.
+     */
+    constructor($$source = {}) {
+        if (!("uid" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["uid"] = "";
+        }
+        if (!("name" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["name"] = "";
+        }
+        if (!("avatar" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["avatar"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new UserBriefInfo instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {UserBriefInfo}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new UserBriefInfo(/** @type {Partial<UserBriefInfo>} */($$parsedSource));
+    }
+}
+
 // Private type creation functions
 const $$createType0 = $Create.Array($Create.Any);
 const $$createType1 = MomentCommentInfo.createFrom;

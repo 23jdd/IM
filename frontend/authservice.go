@@ -165,6 +165,21 @@ type FriendInfo struct {
 	Avatar string `json:"avatar"`
 }
 
+type UserBriefInfo struct {
+	Uid    string `json:"uid"`
+	Name   string `json:"name"`
+	Avatar string `json:"avatar"`
+}
+
+// UserInfo 按 uid 查询用户公开信息（搜索添加好友前预览）。
+func (a *AuthService) UserInfo(token, uid string) (*UserBriefInfo, error) {
+	var out UserBriefInfo
+	if err := a.do(http.MethodGet, "/api/user/info?uid="+url.QueryEscape(uid), token, nil, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 // GetFriends 获取好友列表。
 func (a *AuthService) GetFriends(token string) ([]FriendInfo, error) {
 	var out []FriendInfo

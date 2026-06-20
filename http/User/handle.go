@@ -431,6 +431,20 @@ func InviteToGroup(c *gin.Context) {
 	ok(c, nil)
 }
 
+func GetUserInfo(c *gin.Context) {
+	uid := c.Query("uid")
+	if uid == "" {
+		fail(c, -1, "uid required")
+		return
+	}
+	u, err := service.GetUserBrief(c.Request.Context(), uid)
+	if err != nil {
+		fail(c, -1, "用户不存在")
+		return
+	}
+	ok(c, u)
+}
+
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		auth := c.GetHeader("Authorization")

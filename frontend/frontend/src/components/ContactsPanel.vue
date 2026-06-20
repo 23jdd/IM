@@ -40,25 +40,47 @@ async function refreshFriends() {
   }
 }
 
-// 添加好友
+// 添加好友（搜索 uid 查到用户再添加）
 const addVisible = ref(false)
-const addForm = ref({ uid: '', remark: '' })
+const searchUid = ref('')
+const searched = ref(null) // {uid, name, avatar}
+const searching = ref(false)
+const addRemark = ref('')
 const adding = ref(false)
 
 function openAdd() {
-  addForm.value = { uid: '', remark: '' }
+  searchUid.value = ''
+  searched.value = null
+  addRemark.value = ''
   addVisible.value = true
 }
 
-async function submitAdd() {
-  const uid = addForm.value.uid.trim()
+async function doSearch() {
+  const uid = searchUid.value.trim()
   if (!uid) {
     ElMessage.warning('请输入对方账号(UID)')
     return
   }
+  searching.value = true
+  searched.value = null
+  try {
+    searched.value = await api.userInfo(user.token, uid)
+  } catch (e) {
+    ElMessage.warning('未找到该用户')
+  } finally {
+    searching.value = false
+  }
+}
+
+async function submitAdd() {
+  if (!searched.value) return
+  if (searched.value.uid === user.uid) {
+    ElMessage.warning('不能添加自己为好友')
+    return
+  }
   adding.value = true
   try {
-    await api.friendRequest(user.token, uid, addForm.value.remark.trim())
+    await api.friendRequest(user.token, searched.value.uid, addRemark.value.trim())
     ElMessage.success('好友申请已发送')
     addVisible.value = false
   } catch (e) {
@@ -133,19 +155,41 @@ onMounted(loadRequests)
       <div v-if="!contacts.length" class="empty-line">暂无好友</div>
     </div>
 
-    <el-dialog v-model="addVisible" title="添加好友" width="320px" align-center>
-      <el-form label-position="top">
-        <el-form-item label="对方账号 (UID)">
-          <el-input v-model="addForm.uid" placeholder="请输入对方 UID" />
-        </el-form-item>
-        <el-form-item label="备注 (可选)">
-          <el-input v-model="addForm.remark" placeholder="验证信息/备注" />
-        </el-form-item>
-      </el-form>
+    <el-dialog v-model="addVisible" title="添加好友" width="340px" align-center>
+      <div class="search-row">
+        <el-input
+          v-model="searchUid"
+          placeholder="输入对方账号(UID)搜索"
+          @keyup.enter="doSearch"
+        />
+        <el-button :loading="searching" @click="doSearch">搜索</el-button>
+      </div>
+
+      <div v-if="searched" class="search-result">
+        <Avatar :uid="searched.uid" :name="searched.name" :size="44" />
+        <div class="sr-info">
+          <div class="sr-name">{{ searched.name || searched.uid }}</div>
+          <div class="sr-uid">UID: {{ searched.uid }}</div>
+        </div>
+      </div>
+      <el-input
+        v-if="searched"
+        v-model="addRemark"
+        placeholder="备注 (可选)"
+        size="small"
+        style="margin-top: 10px"
+      />
+
       <template #footer>
         <el-button @click="addVisible = false">取消</el-button>
-        <el-button type="primary" color="#07c160" :loading="adding" @click="submitAdd">
-          发送申请
+        <el-button
+          type="primary"
+          color="#07c160"
+          :loading="adding"
+          :disabled="!searched"
+          @click="submitAdd"
+        >
+          添加好友
         </el-button>
       </template>
     </el-dialog>
@@ -239,5 +283,30 @@ onMounted(loadRequests)
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.search-row {
+  display: flex;
+  gap: 8px;
+}
+.search-result {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 10px;
+  background: var(--wx-list-bg);
+  border-radius: 6px;
+}
+.sr-info {
+  flex: 1;
+  min-width: 0;
+}
+.sr-name {
+  font-size: 15px;
+}
+.sr-uid {
+  font-size: 12px;
+  color: var(--wx-text-sub);
+  margin-top: 2px;
 }
 </style>
