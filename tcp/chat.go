@@ -25,7 +25,7 @@ func ChatMessageHandler(m *Message.Message, c *Client) {
 	}
 
 	ctx := context.Background()
-	msg, err := service.SendChatMessage(ctx, c.uid, payload.ToUid, Message.Text, payload.Content)
+	msg, err := service.SendChatMessage(ctx, c.UID(), payload.ToUid, Message.Text, payload.Content)
 	if err != nil {
 		log.Println("chat: save message failed:", err)
 		c.SendNack(m.GetKey())
@@ -45,7 +45,7 @@ func ChatMessageHandler(m *Message.Message, c *Client) {
 
 func OfflineSyncHandler(m *Message.Message, c *Client) {
 	ctx := context.Background()
-	msgs, err := service.GetOfflineMessages(ctx, c.uid)
+	msgs, err := service.GetOfflineMessages(ctx, c.UID())
 	if err != nil {
 		log.Println("offline sync: query failed:", err)
 		return

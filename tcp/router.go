@@ -14,14 +14,15 @@ func RegisterRoute(msgType byte, h BusinessHandler) {
 }
 
 func Router(m *Message.Message, c *Client) {
-	if c.uid == "" {
+	uid := c.UID()
+	if uid == "" {
 		return
 	}
 
 	t := m.GetMsgType()
 	h, ok := bizRoutes[t]
 	if !ok {
-		log.Printf("no route for message type %d from %s", t, c.uid)
+		log.Printf("no route for message type %d from %s", t, uid)
 		return
 	}
 

@@ -21,7 +21,7 @@ func Verify(m *Message.Message, c *Client) {
 	}
 	c.finished = true
 
-	if c.uid != "" {
+	if c.UID() != "" {
 		if err := c.SendNack(m.GetKey()); err != nil {
 			c.Close()
 		}
@@ -37,8 +37,8 @@ func Verify(m *Message.Message, c *Client) {
 		return
 	}
 
-	c.uid = claim.Uid
-	c.server.clients.Store(c.uid, c)
+	c.setUID(claim.Uid)
+	c.server.clients.Store(claim.Uid, c)
 	if err := c.SendAck(m.GetKey()); err != nil {
 		log.Println("verify ack send error:", err)
 		c.Close()

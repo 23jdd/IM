@@ -9,42 +9,56 @@ import (
 	"log"
 	"net"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 type Client struct {
-	uid       string
-	con       net.Conn
-	context   *Context
-	server    *Server
-	closed    bool
-	worker    chan *Message.Message
-	heart     chan any
-	finished  bool
-	key       uint32
-	writeMu   sync.Mutex
-	closeOnce sync.Once
+	uidMu        sync.RWMutex
+	uid          string
+	con          net.Conn
+	context      *Context
+	server       *Server
+	closed       atomic.Bool
+	worker       chan *Message.Message
+	heart        chan any
+	finished     bool
+	key          uint32
+	writeMu      sync.Mutex
+	closeOnce    sync.Once
+	quit         chan struct{}
+	writeTimeout time.Duration
 }
 
 const WorkerSize int = 200
 
+// defaultWriteTimeout 给每次写设置截止时间：对端假死时写最终会失败，
+// 配合心跳即可在有限时间内发现并清理死连接。
+const defaultWriteTimeout = 10 * time.Second
+
+// MaxBodyLen 单条消息体最大长度，防止恶意/错误的超大长度字段导致 OOM 或溢出。
+const MaxBodyLen = 1 << 20 // 1MB
+
 func NewClient(con net.Conn, server *Server) *Client {
 	return &Client{
-		con:     con,
-		server:  server,
-		worker:  make(chan *Message.Message, WorkerSize),
-		context: NewContext(),
-		heart:   make(chan any, 1),
+		con:          con,
+		server:       server,
+		worker:       make(chan *Message.Message, WorkerSize),
+		context:      NewContext(),
+		heart:        make(chan any, 1),
+		quit:         make(chan struct{}),
+		writeTimeout: defaultWriteTimeout,
 	}
 }
 
 func (c *Client) HeartBeat() {
 	ticker := time.NewTicker(c.server.t)
 	defer ticker.Stop()
-	for !c.closed {
+	for {
 		select {
-		case s := <-ticker.C:
-			fmt.Println(s.String())
+		case <-c.quit:
+			return
+		case <-ticker.C:
 			c.OnTicker()
 		}
 	}
@@ -62,7 +76,7 @@ func (c *Client) Start() {
 				close(c.worker)
 				return
 			}
-			c.closed = true
+			c.closed.Store(true)
 			close(c.worker)
 			return
 		}
@@ -73,14 +87,16 @@ func (c *Client) Start() {
 func (c *Client) MessageHandler() {
 	for {
 		select {
+		case <-c.quit:
+			return
 		case _, ok := <-c.heart:
 			if !ok {
 				return
 			}
 			c.IncrKey()
 			if err := c.SendHeart(c.key); err != nil {
-				c.closed = true
-				log.Println(err)
+				log.Println("heartbeat send failed, closing:", err)
+				c.Close()
 				return
 			}
 		case message, ok := <-c.worker:
@@ -107,7 +123,19 @@ func (c *Client) Context() *Context {
 }
 
 func (c *Client) UID() string {
+	c.uidMu.RLock()
+	defer c.uidMu.RUnlock()
 	return c.uid
+}
+
+func (c *Client) setUID(uid string) {
+	c.uidMu.Lock()
+	c.uid = uid
+	c.uidMu.Unlock()
+}
+
+func (c *Client) IsClosed() bool {
+	return c.closed.Load()
 }
 
 func (c *Client) OnTicker() {
@@ -119,9 +147,11 @@ func (c *Client) OnTicker() {
 
 func (c *Client) Close() {
 	c.closeOnce.Do(func() {
-		c.closed = true
-		if c.uid != "" {
-			c.server.clients.Delete(c.uid)
+		c.closed.Store(true)
+		close(c.quit)
+		uid := c.UID()
+		if uid != "" {
+			c.server.clients.Delete(uid)
 		}
 		c.server.count.Add(-1)
 		if err := c.con.Close(); err != nil {
@@ -131,8 +161,14 @@ func (c *Client) Close() {
 }
 
 func (c *Client) Send(message *Message.Message) error {
+	if c.closed.Load() {
+		return net.ErrClosed
+	}
 	c.writeMu.Lock()
 	defer c.writeMu.Unlock()
+	if c.writeTimeout > 0 {
+		_ = c.con.SetWriteDeadline(time.Now().Add(c.writeTimeout))
+	}
 	_, err := c.con.Write(Message.Encode(message))
 	return err
 }
@@ -177,16 +213,20 @@ func (c *Client) SendNack(key uint32) error {
 
 func (c *Client) ReadMessage() (*Message.Message, error) {
 	header := c.server.bufPool.Get(8)
-	_, err := io.ReadFull(c.con, header)
-	if err != nil {
+	if _, err := io.ReadFull(c.con, header); err != nil {
+		c.server.bufPool.Put(header)
 		return nil, err
 	}
 	length := binary.BigEndian.Uint32(header[4:8])
+	if length > MaxBodyLen {
+		c.server.bufPool.Put(header)
+		return nil, fmt.Errorf("message body too large: %d > %d", length, MaxBodyLen)
+	}
 	buf := c.server.bufPool.Get(int(length) + 8)
 	copy(buf, header)
 	c.server.bufPool.Put(header)
-	_, err = io.ReadFull(c.con, buf[8:])
-	if err != nil {
+	if _, err := io.ReadFull(c.con, buf[8:]); err != nil {
+		c.server.bufPool.Put(buf)
 		return nil, err
 	}
 	message, err := Message.Decode(buf)
