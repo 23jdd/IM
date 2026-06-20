@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"fmt"
+	"io"
 	"math/rand"
 	"net"
 	"sync"
@@ -97,46 +98,33 @@ func StartTCPProxy(listenAddr string, lb *LoadBalancer) error {
 		}
 
 		go func() {
-			defer clientConn.Close()
-
 			backendConn, err := net.DialTimeout("tcp", backend.Addr, 5*time.Second)
 			if err != nil {
+				clientConn.Close()
 				return
 			}
-			defer backendConn.Close()
-
-			var wg sync.WaitGroup
-			wg.Add(2)
-
-			go func() {
-				defer wg.Done()
-				buf := make([]byte, 4096)
-				for {
-					n, err := clientConn.Read(buf)
-					if err != nil {
-						return
-					}
-					if _, err := backendConn.Write(buf[:n]); err != nil {
-						return
-					}
-				}
-			}()
-
-			go func() {
-				defer wg.Done()
-				buf := make([]byte, 4096)
-				for {
-					n, err := backendConn.Read(buf)
-					if err != nil {
-						return
-					}
-					if _, err := clientConn.Write(buf[:n]); err != nil {
-						return
-					}
-				}
-			}()
-
-			wg.Wait()
+			ProxyConn(clientConn, backendConn)
 		}()
 	}
+}
+
+// ProxyConn 在两个连接间双向转发数据。
+// 当任一方向结束（EOF 或出错）时，立即关闭两个连接，
+// 使另一方向的拷贝也及时退出，避免连接 / 协程长时间残留（修复半关闭悬挂问题）。
+func ProxyConn(a, b net.Conn) {
+	done := make(chan struct{}, 2)
+
+	go func() {
+		_, _ = io.Copy(b, a)
+		done <- struct{}{}
+	}()
+	go func() {
+		_, _ = io.Copy(a, b)
+		done <- struct{}{}
+	}()
+
+	<-done // 任一方向结束
+	a.Close()
+	b.Close()
+	<-done // 等待另一方向退出，确认无协程泄漏
 }
