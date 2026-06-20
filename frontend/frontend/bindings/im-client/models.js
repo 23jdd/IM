@@ -615,6 +615,56 @@ export class RegisterResult {
     }
 }
 
+export class Session {
+    /**
+     * Creates a new Session instance.
+     * @param {Partial<Session>} [$$source = {}] - The source object to create the Session.
+     */
+    constructor($$source = {}) {
+        if (!("token" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["token"] = "";
+        }
+        if (!("uid" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["uid"] = "";
+        }
+        if (!("name" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["name"] = "";
+        }
+        if (!("profile" in $$source)) {
+            /**
+             * 序列化的 JSON 字符串
+             * @member
+             * @type {string}
+             */
+            this["profile"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new Session instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {Session}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new Session(/** @type {Partial<Session>} */($$parsedSource));
+    }
+}
+
 export class UserBriefInfo {
     /**
      * Creates a new UserBriefInfo instance.

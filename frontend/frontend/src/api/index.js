@@ -64,6 +64,10 @@ export const api = {
   localSave: (peer, msgId, fromUid, content, self, status, ts) =>
     LocalStore.SaveMessage(peer, msgId, fromUid, content, self, status, ts),
   localLoad: (peer, limit) => LocalStore.LoadMessages(peer, limit),
+  saveSession: (token, uid, name, profile) =>
+    LocalStore.SaveSession(token, uid, name, profile),
+  loadSession: () => LocalStore.LoadSession(),
+  clearSession: () => LocalStore.ClearSession(),
 }
 
 // 监听后端推送事件，返回取消订阅函数。

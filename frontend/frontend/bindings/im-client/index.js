@@ -24,5 +24,6 @@ export {
     MomentInfo,
     Profile,
     RegisterResult,
+    Session,
     UserBriefInfo
 } from "./models.js";
