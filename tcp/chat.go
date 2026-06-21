@@ -15,6 +15,7 @@ var (
 	markMessagesRead   = service.MarkMessagesRead
 	getGroupMembers    = service.GetGroupMembers
 	sendGroupMessage   = service.SendGroupMessage
+	isBlocked          = service.IsBlocked
 )
 
 type TextChatPayload struct {
@@ -79,6 +80,16 @@ func ChatMessageHandler(m *Message.Message, c *Client) {
 	}
 
 	ctx := context.Background()
+
+	// 黑名单拦截：任一方向拉黑则拒绝单聊投递，并提示发送方。
+	if blocked, _ := isBlocked(ctx, c.UID(), payload.ToUid); blocked {
+		c.finished = true
+		c.SendNack(m.GetKey())
+		bp, _ := json.Marshal(map[string]any{"event": "blocked", "to_uid": payload.ToUid})
+		c.Send(Message.NewMessage(Message.Json, 0, bp))
+		return
+	}
+
 	msg, err := service.SendChatMessage(ctx, c.UID(), payload.ToUid, Message.Text, payload.Content)
 	if err != nil {
 		log.Println("chat: save message failed:", err)

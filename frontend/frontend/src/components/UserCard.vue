@@ -22,6 +22,9 @@ const genderText = { 0: '', 1: '男', 2: '女' }
 const isFriend = computed(
   () => info.value && chat.friends.some((f) => f.uid === info.value.uid)
 )
+const isBlocked = computed(
+  () => info.value && chat.isBlocked(info.value.uid)
+)
 
 watch(
   () => props.modelValue,
@@ -74,6 +77,45 @@ async function removeFriend() {
     ElMessage.error(String(e?.message || e))
   }
 }
+
+async function blockUser() {
+  if (!info.value) return
+  try {
+    await ElMessageBox.confirm('确定将该用户加入黑名单吗？加入后将不再收到对方消息。', '提示', {
+      confirmButtonText: '加入黑名单',
+      cancelButtonText: '取消',
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  try {
+    await api.friendBlock(user.token, info.value.uid)
+    const [blocked, friends] = await Promise.all([
+      api.friendBlockList(user.token),
+      api.getFriends(user.token),
+    ])
+    chat.setBlocked(blocked || [])
+    chat.setFriends(friends || [])
+    ElMessage.success('已加入黑名单')
+    close()
+  } catch (e) {
+    ElMessage.error(String(e?.message || e))
+  }
+}
+
+async function unblockUser() {
+  if (!info.value) return
+  try {
+    await api.friendUnblock(user.token, info.value.uid)
+    const blocked = await api.friendBlockList(user.token)
+    chat.setBlocked(blocked || [])
+    ElMessage.success('已移出黑名单')
+    close()
+  } catch (e) {
+    ElMessage.error(String(e?.message || e))
+  }
+}
 </script>
 
 <template>
@@ -109,6 +151,23 @@ async function removeFriend() {
         @click="removeFriend"
       >
         删除好友
+      </el-button>
+      <el-button
+        v-if="info.uid !== user.uid && !isBlocked"
+        class="uc-btn"
+        type="warning"
+        plain
+        @click="blockUser"
+      >
+        加入黑名单
+      </el-button>
+      <el-button
+        v-if="info.uid !== user.uid && isBlocked"
+        class="uc-btn"
+        plain
+        @click="unblockUser"
+      >
+        移出黑名单
       </el-button>
     </div>
     <div v-else-if="loading" class="uc-tip">加载中...</div>

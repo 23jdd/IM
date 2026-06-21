@@ -38,6 +38,27 @@ export function FriendAccept(token, friendUid) {
 }
 
 /**
+ * FriendBlock 把对方加入黑名单。
+ * @param {string} token
+ * @param {string} friendUid
+ * @returns {$CancellablePromise<void>}
+ */
+export function FriendBlock(token, friendUid) {
+    return $Call.ByID(2040996604, token, friendUid);
+}
+
+/**
+ * FriendBlockList 获取黑名单列表。
+ * @param {string} token
+ * @returns {$CancellablePromise<$models.FriendInfo[]>}
+ */
+export function FriendBlockList(token) {
+    return $Call.ByID(962965124, token).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType1($result);
+    }));
+}
+
+/**
  * FriendRemove 删除好友。
  * @param {string} token
  * @param {string} friendUid
@@ -65,8 +86,18 @@ export function FriendRequest(token, friendUid, remark) {
  */
 export function FriendRequests(token) {
     return $Call.ByID(817458909, token).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType1($result);
+        return $$createType3($result);
     }));
+}
+
+/**
+ * FriendUnblock 把对方移出黑名单。
+ * @param {string} token
+ * @param {string} friendUid
+ * @returns {$CancellablePromise<void>}
+ */
+export function FriendUnblock(token, friendUid) {
+    return $Call.ByID(4102095133, token, friendUid);
 }
 
 /**
@@ -100,7 +131,7 @@ export function GetAvatarByUid(token, uid) {
  */
 export function GetChatHistory(token, peer, group, before, limit) {
     return $Call.ByID(2265014521, token, peer, group, before, limit).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType3($result);
+        return $$createType5($result);
     }));
 }
 
@@ -111,7 +142,7 @@ export function GetChatHistory(token, peer, group, before, limit) {
  */
 export function GetConversations(token) {
     return $Call.ByID(2281367027, token).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType5($result);
+        return $$createType7($result);
     }));
 }
 
@@ -122,7 +153,7 @@ export function GetConversations(token) {
  */
 export function GetFriends(token) {
     return $Call.ByID(3765766454, token).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType7($result);
+        return $$createType1($result);
     }));
 }
 
@@ -450,13 +481,13 @@ export function UserInfo(token, uid) {
 }
 
 // Private type creation functions
-const $$createType0 = $models.FriendRequestInfo.createFrom;
+const $$createType0 = $models.FriendInfo.createFrom;
 const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = $models.HistoryMessageInfo.createFrom;
+const $$createType2 = $models.FriendRequestInfo.createFrom;
 const $$createType3 = $Create.Array($$createType2);
-const $$createType4 = $models.ConversationInfo.createFrom;
+const $$createType4 = $models.HistoryMessageInfo.createFrom;
 const $$createType5 = $Create.Array($$createType4);
-const $$createType6 = $models.FriendInfo.createFrom;
+const $$createType6 = $models.ConversationInfo.createFrom;
 const $$createType7 = $Create.Array($$createType6);
 const $$createType8 = $models.Profile.createFrom;
 const $$createType9 = $Create.Nullable($$createType8);

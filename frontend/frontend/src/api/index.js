@@ -39,6 +39,10 @@ export const api = {
   friendRequests: (token) => AuthService.FriendRequests(token),
   friendAccept: (token, friendUid) => AuthService.FriendAccept(token, friendUid),
   friendRemove: (token, friendUid) => AuthService.FriendRemove(token, friendUid),
+  friendBlock: (token, friendUid) => AuthService.FriendBlock(token, friendUid),
+  friendUnblock: (token, friendUid) =>
+    AuthService.FriendUnblock(token, friendUid),
+  friendBlockList: (token) => AuthService.FriendBlockList(token),
   groupCreate: (token, name, description) =>
     AuthService.GroupCreate(token, name, description),
   groupList: (token) => AuthService.GroupList(token),

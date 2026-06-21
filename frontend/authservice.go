@@ -270,6 +270,29 @@ func (a *AuthService) FriendRemove(token, friendUid string) error {
 	}, nil)
 }
 
+// FriendBlock 把对方加入黑名单。
+func (a *AuthService) FriendBlock(token, friendUid string) error {
+	return a.do(http.MethodPost, "/api/friend/block", token, map[string]string{
+		"friend_uid": friendUid,
+	}, nil)
+}
+
+// FriendUnblock 把对方移出黑名单。
+func (a *AuthService) FriendUnblock(token, friendUid string) error {
+	return a.do(http.MethodPost, "/api/friend/unblock", token, map[string]string{
+		"friend_uid": friendUid,
+	}, nil)
+}
+
+// FriendBlockList 获取黑名单列表。
+func (a *AuthService) FriendBlockList(token string) ([]FriendInfo, error) {
+	var out []FriendInfo
+	if err := a.do(http.MethodGet, "/api/friend/blocklist", token, nil, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 type ConversationInfo struct {
 	Peer    string `json:"peer"`
 	Content string `json:"content"`

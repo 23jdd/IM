@@ -587,6 +587,48 @@ func RemoveFriend(c *gin.Context) {
 	ok(c, nil)
 }
 
+func BlockFriend(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		FriendUid string `json:"friend_uid" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	if err := service.BlockFriend(c.Request.Context(), uid, req.FriendUid); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, nil)
+}
+
+func UnblockFriend(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		FriendUid string `json:"friend_uid" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	if err := service.UnblockFriend(c.Request.Context(), uid, req.FriendUid); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, nil)
+}
+
+func GetBlockedList(c *gin.Context) {
+	uid := c.GetString("uid")
+	resp, err := service.GetBlockedList(c.Request.Context(), uid)
+	if err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, resp)
+}
+
 func InviteToGroup(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {

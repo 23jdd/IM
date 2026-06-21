@@ -15,6 +15,9 @@ var (
 	updateFriendStatus = mysql.UpdateFriendStatus
 	deleteFriendRel    = mysql.DeleteFriend
 	findFriendList     = mysql.FindFriendList
+	upsertBlocked      = mysql.UpsertBlockedFriend
+	findBlockedList    = mysql.FindBlockedList
+	isBlockedBetween   = mysql.IsBlockedBetween
 )
 
 // SendFriendRequest requester 向 target 发起好友申请（单向 pending，避免申请人自己也看到申请）。
@@ -51,11 +54,33 @@ func AcceptFriendRequest(ctx context.Context, accepter, requester string) error 
 	return nil
 }
 
+// BlockFriend 把 friendUid 加入 uid 的黑名单（可拉黑非好友；拉黑后对方从好友列表消失）。
 func BlockFriend(ctx context.Context, uid, friendUid string) error {
-	if err := updateFriendStatus(ctx, uid, friendUid, model.FriendStatusBlocked); err != nil {
+	if uid == friendUid {
+		return errors.New("不能拉黑自己")
+	}
+	if err := upsertBlocked(ctx, uid, friendUid); err != nil {
 		return fmt.Errorf("block friend: %w", err)
 	}
 	return nil
+}
+
+// UnblockFriend 把 friendUid 移出 uid 的黑名单（删除该拉黑关系，如需仍为好友请重新添加）。
+func UnblockFriend(ctx context.Context, uid, friendUid string) error {
+	if err := deleteFriendRel(ctx, uid, friendUid); err != nil {
+		return fmt.Errorf("unblock friend: %w", err)
+	}
+	return nil
+}
+
+// GetBlockedList 返回 uid 的黑名单展示信息。
+func GetBlockedList(ctx context.Context, uid string) ([]*model.FriendInfo, error) {
+	return findBlockedList(ctx, uid)
+}
+
+// IsBlocked 判断 a、b 之间是否存在任一方向的拉黑（用于发送拦截）。
+func IsBlocked(ctx context.Context, a, b string) (bool, error) {
+	return isBlockedBetween(ctx, a, b)
 }
 
 func RemoveFriend(ctx context.Context, uid, friendUid string) error {

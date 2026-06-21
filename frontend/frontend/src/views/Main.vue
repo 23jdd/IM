@@ -135,6 +135,8 @@ async function handleNotify(d) {
     }
   } else if (d.event === 'group_muted_self') {
     ElMessage.warning('你已被禁言，无法发送消息')
+  } else if (d.event === 'blocked') {
+    ElMessage.warning('消息发送失败：你已被对方拉黑或已拉黑对方')
   }
 }
 
@@ -168,6 +170,12 @@ async function loadInitialData() {
     chat.setFriends(friends || [])
   } catch (e) {
     /* 好友接口失败不阻断 */
+  }
+  try {
+    const blocked = await api.friendBlockList(user.token)
+    chat.setBlocked(blocked || [])
+  } catch (e) {
+    /* 黑名单接口失败不阻断 */
   }
   try {
     const groups = await api.groupList(user.token)

@@ -93,6 +93,29 @@ async function submitAdd() {
 // 新的朋友（申请列表）
 const reqVisible = ref(false)
 
+// 黑名单
+const blockVisible = ref(false)
+const blockedList = computed(() => chat.blocked)
+
+async function openBlocked() {
+  try {
+    chat.setBlocked((await api.friendBlockList(user.token)) || [])
+  } catch {
+    /* ignore */
+  }
+  blockVisible.value = true
+}
+
+async function unblock(b) {
+  try {
+    await api.friendUnblock(user.token, b.uid)
+    chat.setBlocked((await api.friendBlockList(user.token)) || [])
+    ElMessage.success('已移出黑名单')
+  } catch (e) {
+    ElMessage.error(String(e?.message || e))
+  }
+}
+
 async function openRequests() {
   await loadRequests()
   reqVisible.value = true
@@ -126,6 +149,7 @@ onMounted(loadRequests)
     <div class="head">
       <span>通讯录</span>
       <div class="head-actions">
+        <el-button size="small" text title="黑名单" @click="openBlocked">黑名单</el-button>
         <el-badge :value="requests.length" :hidden="!requests.length" :max="99">
           <el-button :icon="Bell" circle size="small" title="新的朋友" @click="openRequests" />
         </el-badge>
@@ -211,6 +235,18 @@ onMounted(loadRequests)
         </el-button>
       </div>
       <div v-if="!requests.length" class="empty-line">暂无新的好友申请</div>
+    </el-dialog>
+
+    <el-dialog v-model="blockVisible" title="黑名单" width="340px" align-center>
+      <div v-for="b in blockedList" :key="b.uid" class="req-row">
+        <Avatar :uid="b.uid" :name="b.name || b.uid" :size="36" />
+        <div class="req-info">
+          <div class="req-name">{{ b.name || b.uid }}</div>
+          <div class="req-remark">UID: {{ b.uid }}</div>
+        </div>
+        <el-button size="small" @click="unblock(b)">移出</el-button>
+      </div>
+      <div v-if="!blockedList.length" class="empty-line">黑名单为空</div>
     </el-dialog>
   </div>
 </template>

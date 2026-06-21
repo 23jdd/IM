@@ -32,6 +32,7 @@ export const useChatStore = defineStore('chat', {
     friends: [], // {uid, name, avatar}
     avatarCache: {}, // uid -> dataUrl ('' 表示无头像)
     friendRequests: [], // 收到的好友申请
+    blocked: [], // 黑名单 [{uid, name, avatar}]
     userCardVisible: false, // 用户信息卡片
     userCardUid: '',
   }),
@@ -51,6 +52,7 @@ export const useChatStore = defineStore('chat', {
       for (const m of arr) if (m.time && m.time < min) min = m.time
       return min === Infinity ? 0 : min
     },
+    isBlocked: (s) => (uid) => s.blocked.some((b) => b.uid === uid),
   },
 
   actions: {
@@ -68,6 +70,14 @@ export const useChatStore = defineStore('chat', {
 
     setFriendRequests(list) {
       this.friendRequests = list || []
+    },
+
+    setBlocked(list) {
+      this.blocked = (list || []).map((b) => ({
+        uid: b.uid,
+        name: b.remark || b.name || b.uid,
+        avatar: b.avatar || '',
+      }))
     },
 
     viewUser(uid) {
@@ -360,6 +370,7 @@ export const useChatStore = defineStore('chat', {
       this.friends = []
       this.avatarCache = {}
       this.friendRequests = []
+      this.blocked = []
     },
   },
 })
