@@ -6,10 +6,19 @@ import (
 	"IM/rabbitmq"
 	"IM/utils"
 	"context"
+	"errors"
 	"log"
 	"strconv"
 	"time"
 )
+
+// 通过函数变量注入，便于测试。
+var (
+	findMessageById     = mysql.FindMessageById
+	updateMessageStatus = mysql.UpdateMessageStatus
+)
+
+const recallWindow = 2 * time.Minute
 
 // 通过函数变量注入持久化与发布依赖，便于单元测试替换。
 var (
@@ -118,4 +127,32 @@ func GetConversations(ctx context.Context, uid string) ([]*ConversationItem, err
 		out = append(out, &ConversationItem{Peer: peer, Content: m.Content, Time: m.CreatedAt})
 	}
 	return out, nil
+}
+
+// RecallMessage 撤回自己 2 分钟内发送的消息，并通知相关方（群成员 / 单聊对端 + 自己多端）。
+func RecallMessage(ctx context.Context, uid, msgId string) error {
+	msg, err := findMessageById(ctx, msgId)
+	if err != nil {
+		return errors.New("消息不存在")
+	}
+	if msg.FromUid != uid {
+		return errors.New("只能撤回自己发送的消息")
+	}
+	if time.Since(msg.CreatedAt) > recallWindow {
+		return errors.New("超过 2 分钟，无法撤回")
+	}
+	if err := updateMessageStatus(ctx, msgId, model.MsgStatusRevoked); err != nil {
+		return err
+	}
+
+	if msg.GroupId != "" {
+		members, _ := findGroupMembers(ctx, msg.GroupId)
+		for _, m := range members {
+			notify(m.Uid, "recall", map[string]any{"msg_id": msgId, "group_id": msg.GroupId, "from_uid": uid})
+		}
+	} else {
+		notify(msg.ToUid, "recall", map[string]any{"msg_id": msgId, "from_uid": uid})
+		notify(uid, "recall", map[string]any{"msg_id": msgId, "from_uid": uid})
+	}
+	return nil
 }

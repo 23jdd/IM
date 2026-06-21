@@ -4,8 +4,10 @@ import (
 	"IM/model"
 	"IM/rabbitmq"
 	"context"
+	"encoding/json"
 	"errors"
 	"testing"
+	"time"
 )
 
 // #4 归档链路：SendChatMessage 写库后必须发布 MQ 事件（best-effort）。
@@ -93,5 +95,83 @@ func TestSendChatMessagePublishErrorIsNonFatal(t *testing.T) {
 	}
 	if msg == nil {
 		t.Fatal("expected msg even when archive publish fails")
+	}
+}
+
+func TestRecallMessageByOwnerWithinWindow(t *testing.T) {
+	origFind := findMessageById
+	origUpd := updateMessageStatus
+	defer func() { findMessageById = origFind; updateMessageStatus = origUpd; SetNotifier(nil) }()
+
+	findMessageById = func(ctx context.Context, msgId string) (*model.ChatMessage, error) {
+		return &model.ChatMessage{MsgId: msgId, FromUid: "me", ToUid: "b", CreatedAt: time.Now()}, nil
+	}
+	var newStatus byte = 99
+	updateMessageStatus = func(ctx context.Context, msgId string, status byte) error {
+		newStatus = status
+		return nil
+	}
+	notified := map[string]map[string]any{}
+	SetNotifier(func(toUid string, p []byte) {
+		var m map[string]any
+		_ = json.Unmarshal(p, &m)
+		notified[toUid] = m
+	})
+
+	if err := RecallMessage(context.Background(), "me", "m1"); err != nil {
+		t.Fatal(err)
+	}
+	if newStatus != model.MsgStatusRevoked {
+		t.Errorf("status = %d, want revoked(%d)", newStatus, model.MsgStatusRevoked)
+	}
+	if notified["b"] == nil || notified["b"]["event"] != "recall" || notified["b"]["msg_id"] != "m1" {
+		t.Errorf("peer not notified correctly: %+v", notified["b"])
+	}
+	if notified["me"] == nil {
+		t.Error("self(other ends) should be notified")
+	}
+}
+
+func TestRecallMessageByOtherRejected(t *testing.T) {
+	origFind := findMessageById
+	origUpd := updateMessageStatus
+	defer func() { findMessageById = origFind; updateMessageStatus = origUpd }()
+
+	findMessageById = func(ctx context.Context, msgId string) (*model.ChatMessage, error) {
+		return &model.ChatMessage{MsgId: msgId, FromUid: "owner", CreatedAt: time.Now()}, nil
+	}
+	updCalled := false
+	updateMessageStatus = func(ctx context.Context, msgId string, status byte) error {
+		updCalled = true
+		return nil
+	}
+
+	if err := RecallMessage(context.Background(), "intruder", "m1"); err == nil {
+		t.Fatal("expected error recalling other's message")
+	}
+	if updCalled {
+		t.Error("status must not be updated for non-owner")
+	}
+}
+
+func TestRecallMessageExpired(t *testing.T) {
+	origFind := findMessageById
+	origUpd := updateMessageStatus
+	defer func() { findMessageById = origFind; updateMessageStatus = origUpd }()
+
+	findMessageById = func(ctx context.Context, msgId string) (*model.ChatMessage, error) {
+		return &model.ChatMessage{MsgId: msgId, FromUid: "me", CreatedAt: time.Now().Add(-3 * time.Minute)}, nil
+	}
+	updCalled := false
+	updateMessageStatus = func(ctx context.Context, msgId string, status byte) error {
+		updCalled = true
+		return nil
+	}
+
+	if err := RecallMessage(context.Background(), "me", "m1"); err == nil {
+		t.Fatal("expected error recalling expired message")
+	}
+	if updCalled {
+		t.Error("status must not be updated for expired message")
 	}
 }

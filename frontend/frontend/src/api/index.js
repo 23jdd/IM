@@ -11,6 +11,7 @@ export const api = {
     AuthService.Register(name, password, email, phone),
   getProfile: (token) => AuthService.GetProfile(token),
   userInfo: (token, uid) => AuthService.UserInfo(token, uid),
+  messageRecall: (token, msgId) => AuthService.MessageRecall(token, msgId),
   updateProfile: (token, profile) => AuthService.UpdateProfile(token, profile),
   changePassword: (token, oldPwd, newPwd) =>
     AuthService.ChangePassword(token, oldPwd, newPwd),

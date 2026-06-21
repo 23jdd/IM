@@ -86,7 +86,7 @@ func ChatMessageHandler(m *Message.Message, c *Client) {
 		return
 	}
 
-	c.SendAck(m.GetKey())
+	c.Send(Message.NewMessage(Message.ACK, m.GetKey(), []byte(msg.MsgId)))
 	c.finished = true // 已消费，短路 Echo，避免把发送帧回显给发送方
 
 	err = c.server.RouteTo(payload.ToUid, Message.NewMessage(
@@ -117,7 +117,7 @@ func handleGroupMessage(m *Message.Message, c *Client, payload TextChatPayload) 
 		return
 	}
 
-	c.SendAck(m.GetKey())
+	c.Send(Message.NewMessage(Message.ACK, m.GetKey(), []byte(msg.MsgId)))
 
 	frame := Message.NewMessage(Message.Text, 0,
 		BuildGroupText(c.UID(), payload.GroupId, msg.MsgId, msg.Content, msg.CreatedAt))

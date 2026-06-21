@@ -34,7 +34,7 @@ function bindEvents() {
   )
   unsubs.push(onEvent(EVT.TEXT, (d) => chat.receiveText(d || {})))
   unsubs.push(onEvent(EVT.OFFLINE, (d) => chat.receiveOffline(d || {})))
-  unsubs.push(onEvent(EVT.ACK, (d) => chat.markStatus(Number(d?.key), 'sent')))
+  unsubs.push(onEvent(EVT.ACK, (d) => chat.markStatus(Number(d?.key), 'sent', d?.msg_id)))
   unsubs.push(onEvent(EVT.NACK, (d) => chat.markStatus(Number(d?.key), 'failed')))
   unsubs.push(onEvent(EVT.NOTIFY, (d) => handleNotify(d)))
 }
@@ -107,6 +107,8 @@ async function handleNotify(d) {
       message: '群主拒绝了你的入群申请',
       type: 'warning',
     })
+  } else if (d.event === 'recall') {
+    chat.markRecalled(d.msg_id)
   }
 }
 

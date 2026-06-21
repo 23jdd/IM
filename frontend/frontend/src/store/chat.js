@@ -212,11 +212,24 @@ export const useChatStore = defineStore('chat', {
     },
 
     // ack/nack 回执更新发送状态
-    markStatus(key, status) {
+    markStatus(key, status, msgId) {
       for (const uid of Object.keys(this.messages)) {
         const m = this.messages[uid].find((x) => x.key === key)
         if (m) {
           m.status = status
+          if (msgId) m.msgId = msgId
+          return
+        }
+      }
+    },
+
+    // 撤回：把消息标记为已撤回
+    markRecalled(msgId) {
+      if (!msgId) return
+      for (const uid of Object.keys(this.messages)) {
+        const m = this.messages[uid].find((x) => x.msgId === msgId || x.id === msgId)
+        if (m) {
+          m.recalled = true
           return
         }
       }

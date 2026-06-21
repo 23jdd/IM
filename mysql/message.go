@@ -69,3 +69,21 @@ func FindRecentMessages(ctx context.Context, uid string, limit int) ([]*model.Ch
 	}
 	return msgs, nil
 }
+
+// FindMessageById 按 msg_id 查询单条消息。
+func FindMessageById(ctx context.Context, msgId string) (*model.ChatMessage, error) {
+	query := `SELECT msg_id, from_uid, to_uid, group_id, msg_type, content, status, created_at
+	           FROM chat_message WHERE msg_id = ?`
+	var m model.ChatMessage
+	if err := msgConn.QueryRowCtx(ctx, &m, query, msgId); err != nil {
+		return nil, err
+	}
+	return &m, nil
+}
+
+// UpdateMessageStatus 更新单条消息状态（如撤回 = 2）。
+func UpdateMessageStatus(ctx context.Context, msgId string, status byte) error {
+	query := `UPDATE chat_message SET status = ? WHERE msg_id = ?`
+	_, err := msgConn.ExecCtx(ctx, query, status, msgId)
+	return err
+}

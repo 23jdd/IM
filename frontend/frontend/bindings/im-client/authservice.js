@@ -226,6 +226,16 @@ export function Login(uid, password) {
 }
 
 /**
+ * MessageRecall 撤回自己的消息。
+ * @param {string} token
+ * @param {string} msgId
+ * @returns {$CancellablePromise<void>}
+ */
+export function MessageRecall(token, msgId) {
+    return $Call.ByID(2217445827, token, msgId);
+}
+
+/**
  * MomentComment 评论动态。
  * @param {string} token
  * @param {string} momentId

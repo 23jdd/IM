@@ -76,6 +76,18 @@ function senderName(uid) {
   return nameCache[uid]
 }
 
+function canRecall(m) {
+  return m.self && m.msgId && Date.now() - m.time < 2 * 60 * 1000
+}
+async function recall(m) {
+  try {
+    await api.messageRecall(user.token, m.msgId)
+    m.recalled = true
+  } catch (e) {
+    ElMessage.error('撤回失败：' + String(e?.message || e))
+  }
+}
+
 function stickerOf(content) {
   return parseStickerMsg(content)
 }
@@ -362,44 +374,60 @@ function onKeydown(e) {
             @click="chat.viewUser(m.fromUid || (m.self ? user.uid : conv.uid))"
           />
           <div class="bubble-wrap">
-            <div v-if="conv.isGroup && !m.self" class="sender-name">
-              {{ senderName(m.fromUid) }}
-            </div>
-            <img
-              v-if="stickerOf(m.content)"
-              :src="stickerSrc(stickerOf(m.content).sticker)"
-              class="bubble-sticker"
-              alt=""
-            />
-            <template v-else-if="fileOf(m.content)">
-              <el-image
-                v-if="fileOf(m.content).kind === 'image'"
-                :src="imageUrl(fileOf(m.content).file_id)"
-                :preview-src-list="[imageUrl(fileOf(m.content).file_id)]"
-                fit="cover"
-                class="bubble-img"
-                preview-teleported
-                hide-on-click-modal
-              />
-              <div
-                v-else
-                class="bubble file-card"
-                :class="{ self: m.self }"
-                @click="downloadFile(fileOf(m.content))"
-              >
-                <el-icon :size="28" class="fc-icon"><Document /></el-icon>
-                <div class="fc-info">
-                  <div class="fc-name">{{ fileOf(m.content).name }}</div>
-                  <div class="fc-size">{{ humanSize(fileOf(m.content).size) }}</div>
-                </div>
-                <el-icon class="fc-dl"><Download /></el-icon>
+            <template v-if="m.recalled">
+              <div class="bubble recalled">
+                {{ m.self ? '你撤回了一条消息' : (conv.isGroup ? senderName(m.fromUid) + ' 撤回了一条消息' : '对方撤回了一条消息') }}
               </div>
             </template>
-            <div v-else class="bubble" :class="{ self: m.self }">{{ m.content }}</div>
-            <div v-if="m.self && m.status !== 'sent'" class="msg-status">
-              <el-icon v-if="m.status === 'sending'" class="spin"><Loading /></el-icon>
-              <el-icon v-else-if="m.status === 'failed'" color="#fa5151"><WarningFilled /></el-icon>
-            </div>
+            <template v-else>
+              <div v-if="conv.isGroup && !m.self" class="sender-name">
+                {{ senderName(m.fromUid) }}
+              </div>
+              <img
+                v-if="stickerOf(m.content)"
+                :src="stickerSrc(stickerOf(m.content).sticker)"
+                class="bubble-sticker"
+                alt=""
+              />
+              <template v-else-if="fileOf(m.content)">
+                <el-image
+                  v-if="fileOf(m.content).kind === 'image'"
+                  :src="imageUrl(fileOf(m.content).file_id)"
+                  :preview-src-list="[imageUrl(fileOf(m.content).file_id)]"
+                  fit="cover"
+                  class="bubble-img"
+                  preview-teleported
+                  hide-on-click-modal
+                />
+                <div
+                  v-else
+                  class="bubble file-card"
+                  :class="{ self: m.self }"
+                  @click="downloadFile(fileOf(m.content))"
+                >
+                  <el-icon :size="28" class="fc-icon"><Document /></el-icon>
+                  <div class="fc-info">
+                    <div class="fc-name">{{ fileOf(m.content).name }}</div>
+                    <div class="fc-size">{{ humanSize(fileOf(m.content).size) }}</div>
+                  </div>
+                  <el-icon class="fc-dl"><Download /></el-icon>
+                </div>
+              </template>
+              <div v-else class="bubble" :class="{ self: m.self }">{{ m.content }}</div>
+              <el-button
+                v-if="canRecall(m)"
+                class="recall-btn"
+                text
+                size="small"
+                @click="recall(m)"
+              >
+                撤回
+              </el-button>
+              <div v-if="m.self && m.status !== 'sent'" class="msg-status">
+                <el-icon v-if="m.status === 'sending'" class="spin"><Loading /></el-icon>
+                <el-icon v-else-if="m.status === 'failed'" color="#fa5151"><WarningFilled /></el-icon>
+              </div>
+            </template>
           </div>
         </div>
         <div v-if="!messages.length" class="no-msg">还没有消息，发送第一条吧</div>
@@ -597,6 +625,19 @@ function onKeydown(e) {
 }
 .clickable-avatar {
   cursor: pointer;
+}
+.bubble.recalled {
+  background: transparent;
+  color: var(--wx-text-sub);
+  font-size: 12px;
+  box-shadow: none;
+}
+.bubble.recalled::after {
+  display: none;
+}
+.recall-btn {
+  color: var(--wx-text-sub);
+  padding: 0 4px;
 }
 .msg-row.self .bubble-wrap {
   flex-direction: row-reverse;

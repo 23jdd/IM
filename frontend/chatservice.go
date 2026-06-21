@@ -194,7 +194,7 @@ func (s *ChatService) readLoop(conn net.Conn) {
 func (s *ChatService) dispatch(t byte, key uint32, body []byte) {
 	switch t {
 	case msgACK:
-		s.emit("im:ack", map[string]any{"key": key})
+		s.emit("im:ack", map[string]any{"key": key, "msg_id": string(body)})
 	case msgNack:
 		s.emit("im:nack", map[string]any{"key": key})
 	case msgText:

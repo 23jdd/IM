@@ -182,6 +182,13 @@ func (a *AuthService) UserInfo(token, uid string) (*UserBriefInfo, error) {
 	return &out, nil
 }
 
+// MessageRecall 撤回自己的消息。
+func (a *AuthService) MessageRecall(token, msgId string) error {
+	return a.do(http.MethodPost, "/api/message/recall", token, map[string]string{
+		"msg_id": msgId,
+	}, nil)
+}
+
 // GetFriends 获取好友列表。
 func (a *AuthService) GetFriends(token string) ([]FriendInfo, error) {
 	var out []FriendInfo

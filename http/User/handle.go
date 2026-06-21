@@ -520,6 +520,22 @@ func UploadFile(c *gin.Context) {
 	ok(c, gin.H{"file_id": id})
 }
 
+func RecallMessage(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		MsgId string `json:"msg_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	if err := service.RecallMessage(c.Request.Context(), uid, req.MsgId); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, nil)
+}
+
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		auth := c.GetHeader("Authorization")
