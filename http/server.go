@@ -52,6 +52,7 @@ func (s *Server) Start() {
 			auth.GET("/friend/requests", User.GetFriendRequests)
 			auth.POST("/friend/accept", User.AcceptFriend)
 			auth.POST("/friend/remove", User.RemoveFriend)
+			auth.POST("/friend/remark", User.UpdateFriendRemark)
 			auth.POST("/friend/block", User.BlockFriend)
 			auth.POST("/friend/unblock", User.UnblockFriend)
 			auth.GET("/friend/blocklist", User.GetBlockedList)

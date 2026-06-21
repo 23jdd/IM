@@ -43,6 +43,8 @@ export const api = {
   friendUnblock: (token, friendUid) =>
     AuthService.FriendUnblock(token, friendUid),
   friendBlockList: (token) => AuthService.FriendBlockList(token),
+  friendRemark: (token, friendUid, remark) =>
+    AuthService.FriendRemark(token, friendUid, remark),
   groupCreate: (token, name, description) =>
     AuthService.GroupCreate(token, name, description),
   groupList: (token) => AuthService.GroupList(token),

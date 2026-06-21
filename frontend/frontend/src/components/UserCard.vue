@@ -78,6 +78,29 @@ async function removeFriend() {
   }
 }
 
+async function editRemark() {
+  if (!info.value) return
+  const cur = chat.friends.find((f) => f.uid === info.value.uid)
+  let remark
+  try {
+    const { value } = await ElMessageBox.prompt('请输入备注名（留空清除备注）', '修改备注', {
+      inputValue: cur ? cur.name : '',
+      inputPlaceholder: '备注名',
+    })
+    remark = (value || '').trim()
+  } catch {
+    return
+  }
+  try {
+    await api.friendRemark(user.token, info.value.uid, remark)
+    const friends = await api.getFriends(user.token)
+    chat.setFriends(friends || [])
+    ElMessage.success('备注已修改')
+  } catch (e) {
+    ElMessage.error(String(e?.message || e))
+  }
+}
+
 async function blockUser() {
   if (!info.value) return
   try {
@@ -142,6 +165,14 @@ async function unblockUser() {
         @click="startChat"
       >
         发消息
+      </el-button>
+      <el-button
+        v-if="isFriend"
+        class="uc-btn"
+        plain
+        @click="editRemark"
+      >
+        修改备注
       </el-button>
       <el-button
         v-if="isFriend"

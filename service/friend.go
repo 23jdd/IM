@@ -15,6 +15,7 @@ var (
 	updateFriendStatus = mysql.UpdateFriendStatus
 	deleteFriendRel    = mysql.DeleteFriend
 	findFriendList     = mysql.FindFriendList
+	updateFriendRemark = mysql.UpdateFriendRemark
 	upsertBlocked      = mysql.UpsertBlockedFriend
 	findBlockedList    = mysql.FindBlockedList
 	isBlockedBetween   = mysql.IsBlockedBetween
@@ -102,4 +103,15 @@ func GetFriendRequests(ctx context.Context, uid string) ([]*model.FriendRelation
 // GetFriendList 返回好友列表展示信息（含昵称/头像/备注）。
 func GetFriendList(ctx context.Context, uid string) ([]*model.FriendInfo, error) {
 	return findFriendList(ctx, uid)
+}
+
+// UpdateFriendRemark 修改 uid 对 friendUid 的好友备注。
+func UpdateFriendRemark(ctx context.Context, uid, friendUid, remark string) error {
+	if uid == friendUid {
+		return errors.New("不能给自己设置备注")
+	}
+	if err := updateFriendRemark(ctx, uid, friendUid, remark); err != nil {
+		return fmt.Errorf("update remark: %w", err)
+	}
+	return nil
 }

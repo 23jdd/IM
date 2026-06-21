@@ -92,10 +92,10 @@ export const useChatStore = defineStore('chat', {
         name: f.remark || f.name || f.uid,
         avatar: f.avatar || '',
       }))
-      // 同步好友名到已有会话（此前仅有 uid 的占位名）
+      // 同步好友名/备注到已有会话（单聊会话名始终跟随当前备注/昵称）。
       for (const f of this.friends) {
         const conv = this.conversations.find((c) => c.uid === f.uid)
-        if (conv && conv.name === conv.uid) conv.name = f.name
+        if (conv && !conv.isGroup) conv.name = f.name
       }
     },
 

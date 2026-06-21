@@ -629,6 +629,23 @@ func GetBlockedList(c *gin.Context) {
 	ok(c, resp)
 }
 
+func UpdateFriendRemark(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		FriendUid string `json:"friend_uid" binding:"required"`
+		Remark    string `json:"remark"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	if err := service.UpdateFriendRemark(c.Request.Context(), uid, req.FriendUid, req.Remark); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, nil)
+}
+
 func InviteToGroup(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {

@@ -56,6 +56,13 @@ func DeleteFriend(ctx context.Context, uid, friendUid string) error {
 	return err
 }
 
+// UpdateFriendRemark 修改 uid 对 friendUid 的好友备注。
+func UpdateFriendRemark(ctx context.Context, uid, friendUid, remark string) error {
+	query := `UPDATE friend_relation SET remark = ? WHERE uid = ? AND friend_uid = ?`
+	_, err := friendConn.ExecCtx(ctx, query, remark, uid, friendUid)
+	return err
+}
+
 // FindFriendList 返回已接受好友的展示信息（join user 表）。
 func FindFriendList(ctx context.Context, uid string) ([]*model.FriendInfo, error) {
 	query := `SELECT f.friend_uid, COALESCE(f.remark,'') AS remark,

@@ -59,6 +59,17 @@ export function FriendBlockList(token) {
 }
 
 /**
+ * FriendRemark 修改对好友的备注。
+ * @param {string} token
+ * @param {string} friendUid
+ * @param {string} remark
+ * @returns {$CancellablePromise<void>}
+ */
+export function FriendRemark(token, friendUid, remark) {
+    return $Call.ByID(1637294347, token, friendUid, remark);
+}
+
+/**
  * FriendRemove 删除好友。
  * @param {string} token
  * @param {string} friendUid

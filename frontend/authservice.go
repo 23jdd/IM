@@ -293,6 +293,14 @@ func (a *AuthService) FriendBlockList(token string) ([]FriendInfo, error) {
 	return out, nil
 }
 
+// FriendRemark 修改对好友的备注。
+func (a *AuthService) FriendRemark(token, friendUid, remark string) error {
+	return a.do(http.MethodPost, "/api/friend/remark", token, map[string]string{
+		"friend_uid": friendUid,
+		"remark":     remark,
+	}, nil)
+}
+
 type ConversationInfo struct {
 	Peer    string `json:"peer"`
 	Content string `json:"content"`
