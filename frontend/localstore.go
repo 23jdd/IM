@@ -191,6 +191,20 @@ func (s *LocalStore) SaveMessage(peer, msgId, fromUid, content string, self bool
 	return err
 }
 
+// MarkRecalled 将本地某条消息标记为已撤回（按 msg_id 定位），使撤回状态在重启后仍生效。
+func (s *LocalStore) MarkRecalled(msgId string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.db == nil {
+		return errors.New("local store not initialized")
+	}
+	if msgId == "" {
+		return nil
+	}
+	_, err := s.db.Exec(`UPDATE messages SET status = 'recalled' WHERE msg_id = ?`, msgId)
+	return err
+}
+
 // LoadMessages 按会话加载最近 limit 条消息（时间升序）。
 func (s *LocalStore) LoadMessages(peer string, limit int) ([]LocalMessage, error) {
 	s.mu.Lock()

@@ -57,6 +57,15 @@ export function LoadSession() {
 }
 
 /**
+ * MarkRecalled 将本地某条消息标记为已撤回（按 msg_id 定位），使撤回状态在重启后仍生效。
+ * @param {string} msgId
+ * @returns {$CancellablePromise<void>}
+ */
+export function MarkRecalled(msgId) {
+    return $Call.ByID(51041097, msgId);
+}
+
+/**
  * SaveMessage 持久化一条消息。
  * @param {string} peer
  * @param {string} msgId

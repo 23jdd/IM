@@ -187,6 +187,7 @@ export const useChatStore = defineStore('chat', {
           time: r.ts,
           self: r.self,
           status: r.status || (r.self ? 'sent' : 'recv'),
+          recalled: r.status === 'recalled',
         }))
       } catch {
         /* ignore */
@@ -223,13 +224,27 @@ export const useChatStore = defineStore('chat', {
       }
     },
 
-    // 撤回：把消息标记为已撤回
+    // 撤回：把消息标记为已撤回，并持久化到本地库（重启后仍显示“已撤回”）。
     markRecalled(msgId) {
       if (!msgId) return
+      // 接收方一侧本地行以服务端 msg_id 存储，直接按其标记。
+      try {
+        api.localRecall(String(msgId)).catch(() => {})
+      } catch {
+        /* ignore */
+      }
       for (const uid of Object.keys(this.messages)) {
         const m = this.messages[uid].find((x) => x.msgId === msgId || x.id === msgId)
         if (m) {
           m.recalled = true
+          // 发送方本机：发出消息本地行以临时 id 存储，再按 id 标记一次。
+          if (m.id && m.id !== msgId) {
+            try {
+              api.localRecall(String(m.id)).catch(() => {})
+            } catch {
+              /* ignore */
+            }
+          }
           return
         }
       }

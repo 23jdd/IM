@@ -82,7 +82,7 @@ function canRecall(m) {
 async function recall(m) {
   try {
     await api.messageRecall(user.token, m.msgId)
-    m.recalled = true
+    chat.markRecalled(m.msgId)
   } catch (e) {
     ElMessage.error('撤回失败：' + String(e?.message || e))
   }
