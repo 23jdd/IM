@@ -139,6 +139,20 @@ func (s *ChatService) Sync() error {
 	return s.write(msgJson, s.nextKey(), []byte("{}"))
 }
 
+// SendTyping 发送“正在输入”信号（走通知通道：Json 帧，action=typing）。
+// 单聊传 toUid，群聊传 groupId（另一个留空）。即发即弃，未连接时忽略。
+func (s *ChatService) SendTyping(toUid, groupId string) error {
+	if !s.isConnected() {
+		return nil
+	}
+	payload, _ := json.Marshal(map[string]any{
+		"action":   "typing",
+		"to_uid":   toUid,
+		"group_id": groupId,
+	})
+	return s.write(msgJson, s.nextKey(), payload)
+}
+
 // SaveFile 弹出保存对话框，把 base64 数据写入用户选择的路径，返回保存路径（取消则空串）。
 func (s *ChatService) SaveFile(suggestedName, dataBase64 string) (string, error) {
 	if s.app == nil {

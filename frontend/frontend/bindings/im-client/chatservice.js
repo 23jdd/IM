@@ -75,6 +75,17 @@ export function SendText(toUid, content) {
 }
 
 /**
+ * SendTyping 发送“正在输入”信号（走通知通道：Json 帧，action=typing）。
+ * 单聊传 toUid，群聊传 groupId（另一个留空）。即发即弃，未连接时忽略。
+ * @param {string} toUid
+ * @param {string} groupId
+ * @returns {$CancellablePromise<void>}
+ */
+export function SendTyping(toUid, groupId) {
+    return $Call.ByID(2225526646, toUid, groupId);
+}
+
+/**
  * @param {application$0.App | null} app
  * @returns {$CancellablePromise<void>}
  */

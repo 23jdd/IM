@@ -173,6 +173,20 @@ func handleGroupMessage(m *Message.Message, c *Client, payload TextChatPayload) 
 
 func OfflineSyncHandler(m *Message.Message, c *Client) {
 	c.finished = true // 同步请求已消费，短路 Echo
+
+	// Json 帧分流：带 action=typing 的为“正在输入”信号（即发即弃，不落库、不归档）。
+	if len(m.Data) > 0 {
+		var req struct {
+			Action  string `json:"action"`
+			ToUid   string `json:"to_uid"`
+			GroupId string `json:"group_id"`
+		}
+		if json.Unmarshal(m.Data, &req) == nil && req.Action == "typing" {
+			handleTyping(c, req.ToUid, req.GroupId)
+			return
+		}
+	}
+
 	ctx := context.Background()
 	msgs, err := getOfflineMessages(ctx, c.UID())
 	if err != nil {
@@ -191,6 +205,30 @@ func OfflineSyncHandler(m *Message.Message, c *Client) {
 		}
 		c.trackOffline(key, msg.MsgId)
 	}
+}
+
+// handleTyping 转发“正在输入”信号给单聊对端或群在线成员（即发即弃，best-effort，不落库）。
+func handleTyping(c *Client, toUid, groupId string) {
+	if groupId != "" {
+		members, err := getGroupMembers(context.Background(), groupId)
+		if err != nil {
+			return
+		}
+		payload, _ := json.Marshal(map[string]any{"event": "typing", "from_uid": c.UID(), "group_id": groupId})
+		frame := Message.NewMessage(Message.Json, 0, payload)
+		for _, mem := range members {
+			if mem.Uid == c.UID() {
+				continue
+			}
+			_ = c.server.RouteTo(mem.Uid, frame)
+		}
+		return
+	}
+	if toUid == "" {
+		return
+	}
+	payload, _ := json.Marshal(map[string]any{"event": "typing", "from_uid": c.UID()})
+	_ = c.server.RouteTo(toUid, Message.NewMessage(Message.Json, 0, payload))
 }
 
 // AckHandler 处理客户端对离线消息的确认：收到 ACK(key) 后才将对应消息标记已读。

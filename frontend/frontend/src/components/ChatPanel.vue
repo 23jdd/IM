@@ -1,5 +1,5 @@
 <script setup>
-import { ref, reactive, computed, nextTick, watch, onMounted } from 'vue'
+import { ref, reactive, computed, nextTick, watch, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Promotion,
@@ -535,6 +535,34 @@ watch(
   { immediate: true }
 )
 
+// 正在输入：发送端节流（每 2.5s 最多一次）；接收端用 ticking now 驱动到期隐藏。
+let lastTypingSent = 0
+function onInput() {
+  const c = conv.value
+  if (!c || !chat.connected) return
+  const now = Date.now()
+  if (now - lastTypingSent < 2500) return
+  lastTypingSent = now
+  api.sendTyping(c.isGroup ? '' : c.uid, c.isGroup ? c.uid : '').catch(() => {})
+}
+
+const nowTick = ref(Date.now())
+let typingTimer = null
+onMounted(() => {
+  typingTimer = setInterval(() => {
+    nowTick.value = Date.now()
+  }, 1000)
+})
+onUnmounted(() => {
+  if (typingTimer) clearInterval(typingTimer)
+})
+const peerTyping = computed(() => {
+  const c = conv.value
+  if (!c) return false
+  const exp = chat.typing[c.uid]
+  return !!exp && exp > nowTick.value
+})
+
 async function send() {
   const text = draft.value.trim()
   if (!text) return
@@ -583,6 +611,9 @@ function onKeydown(e) {
       <div class="chat-header">
         <span class="title">
           <span v-if="conv.isGroup" class="gtag">群</span>{{ conv.name }}
+          <span v-if="peerTyping" class="typing-tip">
+            {{ conv.isGroup ? '有人正在输入…' : '对方正在输入…' }}
+          </span>
         </span>
         <el-button
           v-if="conv.isGroup"
@@ -679,6 +710,7 @@ function onKeydown(e) {
           class="input-box"
           placeholder="输入消息，Enter 发送，Shift+Enter 换行"
           @keydown="onKeydown"
+          @input="onInput"
         ></textarea>
         <div class="send-row">
           <div class="tools">
@@ -877,6 +909,12 @@ function onKeydown(e) {
 .chat-header .title {
   font-size: 16px;
   font-weight: 500;
+}
+.typing-tip {
+  margin-left: 8px;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--wx-green);
 }
 .messages {
   flex: 1;

@@ -135,6 +135,8 @@ async function handleNotify(d) {
     }
   } else if (d.event === 'group_muted_self') {
     ElMessage.warning('你已被禁言，无法发送消息')
+  } else if (d.event === 'typing') {
+    chat.setTyping(d.group_id || d.from_uid)
   } else if (d.event === 'blocked') {
     ElMessage.warning('消息发送失败：你已被对方拉黑或已拉黑对方')
   }

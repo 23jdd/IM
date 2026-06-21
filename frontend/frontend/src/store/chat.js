@@ -33,6 +33,7 @@ export const useChatStore = defineStore('chat', {
     avatarCache: {}, // uid -> dataUrl ('' 表示无头像)
     friendRequests: [], // 收到的好友申请
     blocked: [], // 黑名单 [{uid, name, avatar}]
+    typing: {}, // uid -> 过期时间戳(ms)，用于“正在输入”提示
     userCardVisible: false, // 用户信息卡片
     userCardUid: '',
   }),
@@ -78,6 +79,12 @@ export const useChatStore = defineStore('chat', {
         name: b.remark || b.name || b.uid,
         avatar: b.avatar || '',
       }))
+    },
+
+    // 记录某会话“正在输入”状态（5 秒内有效，发送端每 2.5 秒续期一次）。
+    setTyping(uid) {
+      if (!uid) return
+      this.typing = { ...this.typing, [uid]: Date.now() + 5000 }
     },
 
     viewUser(uid) {
@@ -371,6 +378,7 @@ export const useChatStore = defineStore('chat', {
       this.avatarCache = {}
       this.friendRequests = []
       this.blocked = []
+      this.typing = {}
     },
   },
 })
