@@ -1,6 +1,6 @@
-# WeChatIM
+# ChatIM
 
-一个微信风格的即时通讯系统：**Go 后端**（HTTP + 自研 TCP 长连接 + 网关） + **Wails3 桌面客户端**（Vue3 + Element Plus），客户端与后端完全分离。
+一个即时通讯系统：**Go 后端**（HTTP + 自研 TCP 长连接 + 网关） + **Wails3 桌面客户端**（Vue3 + Element Plus），客户端与后端完全分离。
 
 支持单聊 / 群聊、好友与群组管理、朋友圈、图片 / 文件 / 表情、离线可靠投递、跨实例消息路由，以及客户端本地 SQLite 持久化。
 
@@ -242,6 +242,74 @@ IM/                          # 后端（Go module: IM）
 | Blob | 6 | 二进制（离线消息逐条下发） |
 
 读取有最大包体校验（`MaxBodyLen`）防止 OOM。
+
+---
+
+## ⚙️ TCP 引擎工作原理
+
+### 连接生命周期
+
+```
+客户端 ──TCP──→ Server.Accept ──ants.Pool.Submit──→ Client.Start()
+                                                      ├─ HeartBeat()      心跳 ticker → heart chan
+                                                      ├─ ReadMessage()    解帧(TieredPool) → worker chan
+                                                      └─ MessageHandler() Handler 链 / 处理 heart
+```
+
+- `Server.Start()` 监听端口，每个新连接提交到 **ants 协程池**，运行 `Client.Start()`。
+- `Client.Start()` 启动 **3 个协程**：读循环、心跳、消息处理。
+- 读循环用 **`TieredPool` 分级内存池**（8B~64KB）复用缓冲读取二进制帧，并校验包体上限。
+
+### Handler 链
+
+`main` 按序注册 `Verify → Router → Echo`，每条消息依次流经；业务 Handler **成功消费后置 `finished` 短路后续**（避免被 Echo 回显）：
+
+```
+MessageHandler():
+  for h := range clientHandlers {
+      h(message, client)
+      if client.finished { break }   // 消费即短路
+  }
+  client.finished = false            // 重置
+```
+
+| Handler | 职责 |
+|---|---|
+| **Verify** | 只处理 `Auth`：`ParseToken` → `clients.Store(uid)` → `presence.SetOnline` → ACK；置 `finished` |
+| **Router** | 跳过未认证；按 `type` 查 `bizRoutes`，分发到 `ChatMessageHandler` / `OfflineSyncHandler` / `AckHandler` |
+| **Echo** | 兜底回显未被消费的消息 |
+
+### 心跳保活与优雅退出
+
+```
+HeartBeat() ──ticker(10s)──→ OnTicker() ──heart chan(cap=1, 非阻塞)──→ MessageHandler()
+                                                                          ├─ SendHeart(key)
+                                                                          ├─ 续期 presence 在线状态
+                                                                          └─ 写失败 → Close()
+```
+
+- `heart` channel 容量为 1、非阻塞投递，防止 ticker 堆积。
+- 每次写设置 **写超时**，对端假死时写会失败 → 触发 `Close()`，使心跳真正具备探活能力。
+- 协程通过 `quit` channel 干净退出，无忙等、无泄漏。
+
+### 优雅关闭
+
+```
+SIGINT/SIGTERM → ShutDown:
+  1. close(quit)          → Accept 循环退出
+  2. listener.Close()     → 拒绝新连接
+  3. Range clients.Close  → 逐个关闭连接 + 下线
+  4. workerPool.Release() → 等待 ants 协程池
+```
+
+### 关键设计决策
+
+1. **写串行化**：所有 `Send*` 共享 `writeMu` 串行化 TCP 写入，并带写超时。
+2. **一次清理**：`sync.Once` 确保连接清理只执行一次，防止重复计数/重复下线。
+3. **并发安全**：`closed` 用 `atomic.Bool`、`uid` 用 `RWMutex` 访问器（`-race` 验证无竞争）。
+4. **可靠离线投递**：离线消息逐条 `SendBlob(key)`，**客户端 ACK 后才标记已读**（at-least-once）。
+5. **内存复用**：`TieredPool` 分级内存池复用读缓冲，减少 GC。
+6. **协程池边界**：ants 池只用于 `Start()` 的提交，心跳/消息处理为独立 goroutine。
 
 ---
 
