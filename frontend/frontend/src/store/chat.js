@@ -147,7 +147,7 @@ export const useChatStore = defineStore('chat', {
 
     _persist(uid, msg) {
       if (!uid || uid === '__unknown__') return
-      const fromUid = msg.self ? this.selfUid : uid
+      const fromUid = msg.fromUid || (msg.self ? this.selfUid : uid)
       try {
         api
           .localSave(
@@ -174,6 +174,7 @@ export const useChatStore = defineStore('chat', {
         if (this.messages[uid] && this.messages[uid].length) return
         this.messages[uid] = rows.map((r) => ({
           id: r.msg_id || nextId(),
+          fromUid: r.from_uid,
           content: r.content,
           time: r.ts,
           self: r.self,
@@ -187,7 +188,15 @@ export const useChatStore = defineStore('chat', {
     // 本地发出的消息
     addOutgoing(uid, content, key) {
       const time = Date.now()
-      const msg = { id: nextId(), content, time, self: true, status: 'sending', key }
+      const msg = {
+        id: nextId(),
+        fromUid: this.selfUid,
+        content,
+        time,
+        self: true,
+        status: 'sending',
+        key,
+      }
       this.ensureConversation(uid)
       this._push(uid, msg)
       this._touch(uid, content, time, false)
@@ -228,6 +237,7 @@ export const useChatStore = defineStore('chat', {
       this.ensureConversation(uid, placeholderName, !!groupId)
       this._push(uid, {
         id: (payload && payload.msg_id) || nextId(),
+        fromUid: from || uid,
         content,
         time,
         self,
@@ -236,17 +246,24 @@ export const useChatStore = defineStore('chat', {
       this._touch(uid, content, time, !self)
     },
 
-    // 离线同步的消息：含 from_uid / to_uid，可正确归属。
+    // 离线同步的消息：含 from_uid / to_uid / group_id，可正确归属。
     receiveOffline(m) {
       const from = m.from_uid
-      const to = m.to_uid
       const self = from === this.selfUid
-      const peer = self ? to : from
+      let peer
+      let isGroup = false
+      if (m.group_id) {
+        peer = m.group_id
+        isGroup = true
+      } else {
+        peer = self ? m.to_uid : from
+      }
       if (!peer) return
       const time = parseTime(m.created_at)
-      this.ensureConversation(peer)
+      this.ensureConversation(peer, undefined, isGroup)
       this._push(peer, {
         id: m.msg_id || nextId(),
+        fromUid: from,
         content: m.content || '',
         time,
         self,

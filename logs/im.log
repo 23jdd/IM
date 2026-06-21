@@ -20,3 +20,7 @@
 {"level":"info","time":"2026-06-20T19:49:47.017+0800","caller":"log/init.go:61","msg":"all services started"}
 {"level":"info","time":"2026-06-20T20:18:23.497+0800","caller":"log/init.go:61","msg":"starting IM server"}
 {"level":"info","time":"2026-06-20T20:18:23.616+0800","caller":"log/init.go:61","msg":"all services started"}
+{"level":"info","time":"2026-06-20T21:22:15.844+0800","caller":"log/init.go:61","msg":"starting IM server"}
+{"level":"info","time":"2026-06-20T21:22:16.025+0800","caller":"log/init.go:61","msg":"all services started"}
+{"level":"info","time":"2026-06-20T21:55:07.886+0800","caller":"log/init.go:61","msg":"starting IM server"}
+{"level":"info","time":"2026-06-20T21:55:08.061+0800","caller":"log/init.go:61","msg":"all services started"}

@@ -58,6 +58,24 @@ function fileOf(content) {
   return parseFileMsg(content)
 }
 
+const nameCache = reactive({})
+function senderName(uid) {
+  if (!uid) return ''
+  if (uid === user.uid) return user.name || uid
+  const f = chat.friends.find((x) => x.uid === uid)
+  if (f) return f.name
+  if (nameCache[uid] === undefined) {
+    nameCache[uid] = uid
+    api
+      .userInfo(user.token, uid)
+      .then((u) => {
+        if (u && u.name) nameCache[uid] = u.name
+      })
+      .catch(() => {})
+  }
+  return nameCache[uid]
+}
+
 function stickerOf(content) {
   return parseStickerMsg(content)
 }
@@ -337,12 +355,14 @@ function onKeydown(e) {
           :class="{ self: m.self }"
         >
           <Avatar
-            :uid="m.self ? user.uid : conv.uid"
-            :name="m.self ? user.name : conv.name"
-            :group="!m.self && conv.isGroup"
+            :uid="m.fromUid || (m.self ? user.uid : conv.uid)"
+            :name="senderName(m.fromUid || (m.self ? user.uid : conv.uid))"
             :size="38"
           />
           <div class="bubble-wrap">
+            <div v-if="conv.isGroup && !m.self" class="sender-name">
+              {{ senderName(m.fromUid) }}
+            </div>
             <img
               v-if="stickerOf(m.content)"
               :src="stickerSrc(stickerOf(m.content).sticker)"
@@ -557,8 +577,15 @@ function onKeydown(e) {
 .bubble-wrap {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
   max-width: 60%;
+}
+.sender-name {
+  flex-basis: 100%;
+  font-size: 11px;
+  color: var(--wx-text-sub);
+  margin-bottom: 2px;
 }
 .msg-row.self .bubble-wrap {
   flex-direction: row-reverse;
