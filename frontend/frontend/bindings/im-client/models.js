@@ -183,6 +183,69 @@ export class GroupBrief {
     }
 }
 
+export class GroupInfoData {
+    /**
+     * Creates a new GroupInfoData instance.
+     * @param {Partial<GroupInfoData>} [$$source = {}] - The source object to create the GroupInfoData.
+     */
+    constructor($$source = {}) {
+        if (!("group_id" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["group_id"] = "";
+        }
+        if (!("name" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["name"] = "";
+        }
+        if (!("owner_uid" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["owner_uid"] = "";
+        }
+        if (!("description" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["description"] = "";
+        }
+        if (!("announcement" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["announcement"] = "";
+        }
+        if (!("status" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["status"] = 0;
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new GroupInfoData instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {GroupInfoData}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new GroupInfoData(/** @type {Partial<GroupInfoData>} */($$parsedSource));
+    }
+}
+
 export class GroupJoinRequestInfo {
     /**
      * Creates a new GroupJoinRequestInfo instance.
@@ -258,6 +321,13 @@ export class GroupMemberInfo {
              * @type {string}
              */
             this["nickname"] = "";
+        }
+        if (!("mute_until" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["mute_until"] = "";
         }
 
         Object.assign(this, $$source);

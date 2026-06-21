@@ -16,6 +16,7 @@ export {
     FriendInfo,
     FriendRequestInfo,
     GroupBrief,
+    GroupInfoData,
     GroupJoinRequestInfo,
     GroupMemberInfo,
     LocalMessage,

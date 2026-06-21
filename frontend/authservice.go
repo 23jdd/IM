@@ -325,9 +325,10 @@ func (a *AuthService) GroupReject(token, groupId, applicantUid string) error {
 }
 
 type GroupMemberInfo struct {
-	Uid      string `json:"uid"`
-	Role     int    `json:"role"`
-	Nickname string `json:"nickname"`
+	Uid       string `json:"uid"`
+	Role      int    `json:"role"`
+	Nickname  string `json:"nickname"`
+	MuteUntil string `json:"mute_until"`
 }
 
 // GroupMembers 获取群成员列表。
@@ -338,6 +339,71 @@ func (a *AuthService) GroupMembers(token, groupId string) ([]GroupMemberInfo, er
 		return nil, err
 	}
 	return out, nil
+}
+
+type GroupInfoData struct {
+	GroupId      string `json:"group_id"`
+	Name         string `json:"name"`
+	OwnerUid     string `json:"owner_uid"`
+	Description  string `json:"description"`
+	Announcement string `json:"announcement"`
+	Status       int    `json:"status"`
+}
+
+// GroupInfo 获取群资料（含群公告）。
+func (a *AuthService) GroupInfo(token, groupId string) (*GroupInfoData, error) {
+	var out GroupInfoData
+	if err := a.do(http.MethodGet, "/api/group/info?group_id="+url.QueryEscape(groupId), token, nil, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// GroupLeave 退出群聊（群主不可退，需先转让或解散）。
+func (a *AuthService) GroupLeave(token, groupId string) error {
+	return a.do(http.MethodPost, "/api/group/leave", token, map[string]string{
+		"group_id": groupId,
+	}, nil)
+}
+
+// GroupDisband 解散群（仅群主）。
+func (a *AuthService) GroupDisband(token, groupId string) error {
+	return a.do(http.MethodPost, "/api/group/disband", token, map[string]string{
+		"group_id": groupId,
+	}, nil)
+}
+
+// GroupKick 踢出群成员（群主/管理员）。
+func (a *AuthService) GroupKick(token, groupId, targetUid string) error {
+	return a.do(http.MethodPost, "/api/group/kick", token, map[string]string{
+		"group_id": groupId,
+		"uid":      targetUid,
+	}, nil)
+}
+
+// GroupTransfer 转让群主（仅群主）。
+func (a *AuthService) GroupTransfer(token, groupId, targetUid string) error {
+	return a.do(http.MethodPost, "/api/group/transfer", token, map[string]string{
+		"group_id": groupId,
+		"uid":      targetUid,
+	}, nil)
+}
+
+// GroupMute 禁言/解除禁言成员（minutes<=0 表示解除）。
+func (a *AuthService) GroupMute(token, groupId, targetUid string, minutes int) error {
+	return a.do(http.MethodPost, "/api/group/mute", token, map[string]any{
+		"group_id": groupId,
+		"uid":      targetUid,
+		"minutes":  minutes,
+	}, nil)
+}
+
+// GroupAnnounce 设置群公告（群主/管理员）。
+func (a *AuthService) GroupAnnounce(token, groupId, announcement string) error {
+	return a.do(http.MethodPost, "/api/group/announce", token, map[string]string{
+		"group_id":     groupId,
+		"announcement": announcement,
+	}, nil)
 }
 
 // UploadAvatar 上传头像（base64 图片），存 MongoDB 并更新 MySQL，返回图片 _id。

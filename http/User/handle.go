@@ -228,6 +228,128 @@ func RejectJoin(c *gin.Context) {
 	ok(c, nil)
 }
 
+func GetGroupInfo(c *gin.Context) {
+	groupId := c.Query("group_id")
+	if groupId == "" {
+		fail(c, -1, "group_id required")
+		return
+	}
+	g, err := service.GetGroup(c.Request.Context(), groupId)
+	if err != nil {
+		fail(c, -1, "群不存在")
+		return
+	}
+	ok(c, gin.H{
+		"group_id":     g.GroupId,
+		"name":         g.Name,
+		"owner_uid":    g.OwnerUid,
+		"description":  g.Description,
+		"announcement": g.Announcement,
+		"status":       g.Status,
+	})
+}
+
+func LeaveGroup(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		GroupId string `json:"group_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	if err := service.LeaveGroup(c.Request.Context(), req.GroupId, uid); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, nil)
+}
+
+func DisbandGroup(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		GroupId string `json:"group_id" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	if err := service.DisbandGroup(c.Request.Context(), req.GroupId, uid); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, nil)
+}
+
+func KickGroupMember(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		GroupId string `json:"group_id" binding:"required"`
+		Uid     string `json:"uid" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	if err := service.KickMember(c.Request.Context(), req.GroupId, uid, req.Uid); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, nil)
+}
+
+func TransferGroup(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		GroupId string `json:"group_id" binding:"required"`
+		Uid     string `json:"uid" binding:"required"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	if err := service.TransferGroupOwner(c.Request.Context(), req.GroupId, uid, req.Uid); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, nil)
+}
+
+func MuteGroupMember(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		GroupId string `json:"group_id" binding:"required"`
+		Uid     string `json:"uid" binding:"required"`
+		Minutes int    `json:"minutes"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	if err := service.MuteMember(c.Request.Context(), req.GroupId, uid, req.Uid, req.Minutes); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, nil)
+}
+
+func SetGroupAnnouncement(c *gin.Context) {
+	uid := c.GetString("uid")
+	var req struct {
+		GroupId      string `json:"group_id" binding:"required"`
+		Announcement string `json:"announcement"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	if err := service.SetGroupAnnouncement(c.Request.Context(), req.GroupId, uid, req.Announcement); err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, nil)
+}
+
 func UploadAvatar(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {

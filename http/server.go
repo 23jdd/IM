@@ -54,12 +54,19 @@ func (s *Server) Start() {
 			auth.GET("/conversation/list", User.GetConversations)
 			auth.POST("/group/create", User.CreateGroup)
 			auth.GET("/group/list", User.GetMyGroups)
+			auth.GET("/group/info", User.GetGroupInfo)
 			auth.GET("/group/members", User.GetGroupMembers)
 			auth.POST("/group/join", User.JoinGroup)
 			auth.POST("/group/invite", User.InviteToGroup)
 			auth.GET("/group/requests", User.GroupJoinRequests)
 			auth.POST("/group/approve", User.ApproveJoin)
 			auth.POST("/group/reject", User.RejectJoin)
+			auth.POST("/group/leave", User.LeaveGroup)
+			auth.POST("/group/disband", User.DisbandGroup)
+			auth.POST("/group/kick", User.KickGroupMember)
+			auth.POST("/group/transfer", User.TransferGroup)
+			auth.POST("/group/mute", User.MuteGroupMember)
+			auth.POST("/group/announce", User.SetGroupAnnouncement)
 		}
 	}
 

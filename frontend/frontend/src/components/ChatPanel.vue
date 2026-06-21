@@ -1,6 +1,6 @@
 <script setup>
 import { ref, reactive, computed, nextTick, watch, onMounted } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import {
   Promotion,
   ChatLineRound,
@@ -33,6 +33,28 @@ const joinRequests = ref([])
 const roleLabels = { 0: '成员', 1: '管理员', 2: '群主' }
 const inviteUid = ref('')
 const inviting = ref(false)
+const groupInfo = ref(null)
+const annVisible = ref(false)
+const annDraft = ref('')
+
+const myRole = computed(() => {
+  const me = members.value.find((m) => m.uid === user.uid)
+  return me ? me.role : -1
+})
+const isOwner = computed(() => myRole.value === 2)
+const isAdmin = computed(() => myRole.value >= 1)
+
+function isMuted(mem) {
+  if (!mem || !mem.mute_until) return false
+  const t = new Date(mem.mute_until).getTime()
+  return !Number.isNaN(t) && t > Date.now()
+}
+function canManage(mem) {
+  if (mem.uid === user.uid) return false
+  if (mem.role === 2) return false
+  if (mem.role === 1 && !isOwner.value) return false
+  return isAdmin.value
+}
 
 const imgInput = ref(null)
 const fileInput = ref(null)
@@ -242,6 +264,11 @@ async function showMembers() {
   loadingMembers.value = true
   try {
     members.value = (await api.groupMembers(user.token, c.uid)) || []
+    try {
+      groupInfo.value = await api.groupInfo(user.token, c.uid)
+    } catch (e) {
+      groupInfo.value = null
+    }
     membersVisible.value = true
     // 群主拉取入群申请
     const me = members.value.find((m) => m.uid === user.uid)
@@ -281,6 +308,150 @@ async function rejectJoin(req) {
     await api.groupReject(user.token, c.uid, req.uid)
     joinRequests.value = joinRequests.value.filter((r) => r.uid !== req.uid)
     ElMessage.success('已拒绝')
+  } catch (e) {
+    ElMessage.error(String(e?.message || e))
+  }
+}
+
+async function refreshMembers() {
+  const c = conv.value
+  if (!c) return
+  try {
+    members.value = (await api.groupMembers(user.token, c.uid)) || []
+  } catch (e) {
+    /* ignore */
+  }
+}
+
+async function kickMember(mem) {
+  const c = conv.value
+  if (!c) return
+  try {
+    await ElMessageBox.confirm(
+      `确定将 ${mem.nickname || mem.uid} 移出群聊？`,
+      '踢出成员',
+      { type: 'warning' }
+    )
+  } catch {
+    return
+  }
+  try {
+    await api.groupKick(user.token, c.uid, mem.uid)
+    members.value = members.value.filter((m) => m.uid !== mem.uid)
+    ElMessage.success('已移出')
+  } catch (e) {
+    ElMessage.error(String(e?.message || e))
+  }
+}
+
+async function muteMember(mem) {
+  const c = conv.value
+  if (!c) return
+  let minutes
+  try {
+    const { value } = await ElMessageBox.prompt('禁言时长（分钟，0 表示解除禁言）', '禁言', {
+      inputValue: '10',
+      inputPattern: /^\d+$/,
+      inputErrorMessage: '请输入非负整数',
+    })
+    minutes = parseInt(value, 10)
+  } catch {
+    return
+  }
+  try {
+    await api.groupMute(user.token, c.uid, mem.uid, minutes)
+    await refreshMembers()
+    ElMessage.success(minutes > 0 ? '已禁言' : '已解除禁言')
+  } catch (e) {
+    ElMessage.error(String(e?.message || e))
+  }
+}
+
+async function unmuteMember(mem) {
+  const c = conv.value
+  if (!c) return
+  try {
+    await api.groupMute(user.token, c.uid, mem.uid, 0)
+    await refreshMembers()
+    ElMessage.success('已解除禁言')
+  } catch (e) {
+    ElMessage.error(String(e?.message || e))
+  }
+}
+
+async function transferOwner(mem) {
+  const c = conv.value
+  if (!c) return
+  try {
+    await ElMessageBox.confirm(
+      `确定将群主转让给 ${mem.nickname || mem.uid}？转让后你将成为普通成员。`,
+      '转让群主',
+      { type: 'warning' }
+    )
+  } catch {
+    return
+  }
+  try {
+    await api.groupTransfer(user.token, c.uid, mem.uid)
+    await refreshMembers()
+    if (groupInfo.value) groupInfo.value.owner_uid = mem.uid
+    ElMessage.success('已转让群主')
+  } catch (e) {
+    ElMessage.error(String(e?.message || e))
+  }
+}
+
+async function leaveGroup() {
+  const c = conv.value
+  if (!c) return
+  try {
+    await ElMessageBox.confirm('确定退出该群聊？', '退群', { type: 'warning' })
+  } catch {
+    return
+  }
+  try {
+    await api.groupLeave(user.token, c.uid)
+    membersVisible.value = false
+    chat.removeConversation(c.uid)
+    ElMessage.success('已退出群聊')
+  } catch (e) {
+    ElMessage.error(String(e?.message || e))
+  }
+}
+
+async function disbandGroup() {
+  const c = conv.value
+  if (!c) return
+  try {
+    await ElMessageBox.confirm('确定解散该群聊？解散后不可恢复。', '解散群', {
+      type: 'warning',
+    })
+  } catch {
+    return
+  }
+  try {
+    await api.groupDisband(user.token, c.uid)
+    membersVisible.value = false
+    chat.removeConversation(c.uid)
+    ElMessage.success('群聊已解散')
+  } catch (e) {
+    ElMessage.error(String(e?.message || e))
+  }
+}
+
+function openAnnounce() {
+  annDraft.value = (groupInfo.value && groupInfo.value.announcement) || ''
+  annVisible.value = true
+}
+
+async function saveAnnounce() {
+  const c = conv.value
+  if (!c) return
+  try {
+    await api.groupAnnounce(user.token, c.uid, annDraft.value)
+    if (groupInfo.value) groupInfo.value.announcement = annDraft.value
+    annVisible.value = false
+    ElMessage.success('公告已发布')
   } catch (e) {
     ElMessage.error(String(e?.message || e))
   }
@@ -491,7 +662,16 @@ function onKeydown(e) {
         </div>
       </div>
 
-      <el-dialog v-model="membersVisible" title="群成员" width="320px" align-center>
+      <el-dialog v-model="membersVisible" title="群成员" width="360px" align-center>
+        <div class="ann-box">
+          <div class="ann-head">
+            <span class="ann-title">群公告</span>
+            <el-button v-if="isAdmin" link size="small" @click="openAnnounce">编辑</el-button>
+          </div>
+          <div class="ann-text">
+            {{ (groupInfo && groupInfo.announcement) || '暂无公告' }}
+          </div>
+        </div>
         <div v-if="joinRequests.length" class="join-reqs">
           <div class="jr-title">入群申请 ({{ joinRequests.length }})</div>
           <div v-for="req in joinRequests" :key="req.uid" class="jr-row">
@@ -512,10 +692,33 @@ function onKeydown(e) {
             @click="chat.viewUser(mem.uid)"
           />
           <div class="member-info">
-            <div class="member-name">{{ mem.nickname || mem.uid }}</div>
+            <div class="member-name">
+              {{ mem.nickname || mem.uid }}
+              <span v-if="isMuted(mem)" class="member-mute-tag">禁言中</span>
+            </div>
             <div class="member-uid">UID: {{ mem.uid }}</div>
           </div>
           <span class="member-role">{{ roleLabels[mem.role] || '成员' }}</span>
+          <div v-if="canManage(mem)" class="member-actions">
+            <el-button
+              v-if="isMuted(mem)"
+              link
+              size="small"
+              @click="unmuteMember(mem)"
+            >
+              解禁
+            </el-button>
+            <el-button v-else link size="small" @click="muteMember(mem)">禁言</el-button>
+            <el-button link size="small" @click="kickMember(mem)">踢出</el-button>
+            <el-button
+              v-if="isOwner"
+              link
+              size="small"
+              @click="transferOwner(mem)"
+            >
+              转让
+            </el-button>
+          </div>
         </div>
         <div v-if="!members.length" class="member-empty">暂无成员</div>
         <div class="invite-box">
@@ -535,6 +738,27 @@ function onKeydown(e) {
             邀请
           </el-button>
         </div>
+        <div class="group-actions">
+          <el-button v-if="isOwner" type="danger" plain size="small" @click="disbandGroup">
+            解散群聊
+          </el-button>
+          <el-button v-else size="small" @click="leaveGroup">退出群聊</el-button>
+        </div>
+      </el-dialog>
+
+      <el-dialog v-model="annVisible" title="群公告" width="360px" align-center>
+        <el-input
+          v-model="annDraft"
+          type="textarea"
+          :rows="5"
+          maxlength="1024"
+          show-word-limit
+          placeholder="输入群公告内容"
+        />
+        <template #footer>
+          <el-button @click="annVisible = false">取消</el-button>
+          <el-button type="primary" color="#07c160" @click="saveAnnounce">发布</el-button>
+        </template>
       </el-dialog>
 
       <el-dialog v-model="mentionVisible" title="@ 群成员" width="300px" align-center>
@@ -886,5 +1110,41 @@ function onKeydown(e) {
 }
 .member-row.pick:hover {
   background: var(--wx-list-hover);
+}
+.ann-box {
+  margin-bottom: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--wx-border);
+}
+.ann-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ann-title {
+  font-size: 12px;
+  color: var(--wx-text-sub);
+}
+.ann-text {
+  font-size: 13px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-top: 2px;
+}
+.member-mute-tag {
+  margin-left: 6px;
+  font-size: 11px;
+  color: #fa5151;
+  border: 1px solid #fa5151;
+  border-radius: 3px;
+  padding: 0 3px;
+}
+.member-actions {
+  display: flex;
+  gap: 2px;
+}
+.group-actions {
+  margin-top: 12px;
+  text-align: center;
 }
 </style>

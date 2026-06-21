@@ -110,6 +110,16 @@ func handleGroupMessage(m *Message.Message, c *Client, payload TextChatPayload) 
 		return
 	}
 
+	// 禁言拦截：发送者在禁言期内则拒绝并提示。
+	for _, mem := range members {
+		if mem.Uid == c.UID() && service.IsMuted(mem) {
+			c.SendNack(m.GetKey())
+			muted, _ := json.Marshal(map[string]any{"event": "group_muted_self", "group_id": payload.GroupId})
+			c.Send(Message.NewMessage(Message.Json, 0, muted))
+			return
+		}
+	}
+
 	msg, err := sendGroupMessage(ctx, c.UID(), payload.GroupId, Message.Text, payload.Content)
 	if err != nil {
 		log.Println("group: save message failed:", err)

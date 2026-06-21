@@ -12,15 +12,16 @@ const (
 )
 
 type GroupInfo struct {
-	GroupId     string    `db:"group_id" json:"group_id"`
-	Name        string    `db:"name" json:"name"`
-	Avatar      string    `db:"avatar" json:"avatar,omitempty"`
-	OwnerUid    string    `db:"owner_uid" json:"owner_uid"`
-	Description string    `db:"description" json:"description,omitempty"`
-	MemberCount uint      `db:"member_count" json:"member_count"`
-	Status      byte      `db:"status" json:"status"`
-	CreatedAt   time.Time `db:"created_at" json:"created_at"`
-	UpdatedAt   time.Time `db:"updated_at" json:"updated_at"`
+	GroupId      string    `db:"group_id" json:"group_id"`
+	Name         string    `db:"name" json:"name"`
+	Avatar       string    `db:"avatar" json:"avatar,omitempty"`
+	OwnerUid     string    `db:"owner_uid" json:"owner_uid"`
+	Description  string    `db:"description" json:"description,omitempty"`
+	Announcement string    `db:"announcement" json:"announcement,omitempty"`
+	MemberCount  uint      `db:"member_count" json:"member_count"`
+	Status       byte      `db:"status" json:"status"`
+	CreatedAt    time.Time `db:"created_at" json:"created_at"`
+	UpdatedAt    time.Time `db:"updated_at" json:"updated_at"`
 }
 
 type GroupMember struct {

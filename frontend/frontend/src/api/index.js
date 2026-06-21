@@ -50,6 +50,17 @@ export const api = {
     AuthService.GroupApprove(token, groupId, applicantUid),
   groupReject: (token, groupId, applicantUid) =>
     AuthService.GroupReject(token, groupId, applicantUid),
+  groupInfo: (token, groupId) => AuthService.GroupInfo(token, groupId),
+  groupLeave: (token, groupId) => AuthService.GroupLeave(token, groupId),
+  groupDisband: (token, groupId) => AuthService.GroupDisband(token, groupId),
+  groupKick: (token, groupId, targetUid) =>
+    AuthService.GroupKick(token, groupId, targetUid),
+  groupTransfer: (token, groupId, targetUid) =>
+    AuthService.GroupTransfer(token, groupId, targetUid),
+  groupMute: (token, groupId, targetUid, minutes) =>
+    AuthService.GroupMute(token, groupId, targetUid, minutes),
+  groupAnnounce: (token, groupId, announcement) =>
+    AuthService.GroupAnnounce(token, groupId, announcement),
 
   // ---- TCP 实时 (ChatService) ----
   connect: () => ChatService.Connect(TCP_ADDR),

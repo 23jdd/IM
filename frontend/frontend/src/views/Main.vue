@@ -109,6 +109,32 @@ async function handleNotify(d) {
     })
   } else if (d.event === 'recall') {
     chat.markRecalled(d.msg_id)
+  } else if (d.event === 'group_disbanded') {
+    chat.removeConversation(d.group_id)
+    ElNotification({ title: '群聊已解散', message: '群主已解散该群聊', type: 'warning' })
+  } else if (d.event === 'group_kicked') {
+    chat.removeConversation(d.group_id)
+    ElNotification({ title: '已被移出群聊', message: '你已被移出该群聊', type: 'warning' })
+  } else if (d.event === 'group_owner_changed') {
+    ElNotification({
+      title: '群主变更',
+      message: '该群的群主已变更',
+      type: 'info',
+    })
+  } else if (d.event === 'group_announcement') {
+    ElNotification({ title: '群公告', message: '群公告已更新', type: 'info' })
+  } else if (d.event === 'group_muted') {
+    if (d.minutes > 0) {
+      ElNotification({
+        title: '被禁言',
+        message: `你已被禁言 ${d.minutes} 分钟`,
+        type: 'warning',
+      })
+    } else {
+      ElNotification({ title: '解除禁言', message: '你已被解除禁言', type: 'success' })
+    }
+  } else if (d.event === 'group_muted_self') {
+    ElMessage.warning('你已被禁言，无法发送消息')
   }
 }
 
