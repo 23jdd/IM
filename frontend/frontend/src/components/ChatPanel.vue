@@ -563,6 +563,29 @@ const peerTyping = computed(() => {
   return !!exp && exp > nowTick.value
 })
 
+// 已读回执：当前正在查看的会话有新消息或切换会话时，向对端/群发送已读到的最新时间。
+function sendReadReceipt() {
+  const c = conv.value
+  if (!c || !chat.connected) return
+  const arr = messages.value
+  if (!arr.length) return
+  let upTo = 0
+  for (const m of arr) if (m.time && m.time > upTo) upTo = m.time
+  if (!upTo) return
+  api
+    .sendRead(c.isGroup ? '' : c.uid, c.isGroup ? c.uid : '', upTo)
+    .catch(() => {})
+}
+
+watch(
+  () => [
+    chat.activeUid,
+    messages.value.length ? messages.value[messages.value.length - 1].time : 0,
+  ],
+  () => sendReadReceipt(),
+  { flush: 'post' }
+)
+
 async function send() {
   const text = draft.value.trim()
   if (!text) return
@@ -694,9 +717,15 @@ function onKeydown(e) {
               >
                 撤回
               </el-button>
-              <div v-if="m.self && m.status !== 'sent'" class="msg-status">
+              <div v-if="m.self" class="msg-status">
                 <el-icon v-if="m.status === 'sending'" class="spin"><Loading /></el-icon>
                 <el-icon v-else-if="m.status === 'failed'" color="#fa5151"><WarningFilled /></el-icon>
+                <span v-else-if="conv.isGroup && m.readers && m.readers.length" class="read-tag">
+                  {{ m.readers.length }}人已读
+                </span>
+                <span v-else-if="!conv.isGroup" class="read-tag" :class="{ read: m.status === 'read' }">
+                  {{ m.status === 'read' ? '已读' : '已送达' }}
+                </span>
               </div>
             </template>
           </div>
@@ -1004,6 +1033,14 @@ function onKeydown(e) {
 .msg-status {
   display: flex;
   align-items: center;
+}
+.read-tag {
+  font-size: 11px;
+  color: var(--wx-text-sub);
+  white-space: nowrap;
+}
+.read-tag.read {
+  color: var(--wx-green);
 }
 .spin {
   animation: spin 1s linear infinite;

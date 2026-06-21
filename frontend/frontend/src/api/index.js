@@ -77,6 +77,8 @@ export const api = {
   sendGroupText: (groupId, content, mentions) =>
     ChatService.SendGroupText(groupId, content, mentions || []),
   sendTyping: (toUid, groupId) => ChatService.SendTyping(toUid, groupId),
+  sendRead: (toUid, groupId, upTo) =>
+    ChatService.SendRead(toUid, groupId, upTo),
   sync: () => ChatService.Sync(),
   disconnect: () => ChatService.Disconnect(),
 

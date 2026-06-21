@@ -153,6 +153,21 @@ func (s *ChatService) SendTyping(toUid, groupId string) error {
 	return s.write(msgJson, s.nextKey(), payload)
 }
 
+// SendRead 发送“已读”回执（走通知通道：Json 帧，action=read）。
+// upTo 为已读到的最新消息时间戳（毫秒）。单聊传 toUid，群聊传 groupId。
+func (s *ChatService) SendRead(toUid, groupId string, upTo int64) error {
+	if !s.isConnected() {
+		return nil
+	}
+	payload, _ := json.Marshal(map[string]any{
+		"action":   "read",
+		"to_uid":   toUid,
+		"group_id": groupId,
+		"up_to":    upTo,
+	})
+	return s.write(msgJson, s.nextKey(), payload)
+}
+
 // SaveFile 弹出保存对话框，把 base64 数据写入用户选择的路径，返回保存路径（取消则空串）。
 func (s *ChatService) SaveFile(suggestedName, dataBase64 string) (string, error) {
 	if s.app == nil {

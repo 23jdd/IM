@@ -137,6 +137,10 @@ async function handleNotify(d) {
     ElMessage.warning('你已被禁言，无法发送消息')
   } else if (d.event === 'typing') {
     chat.setTyping(d.group_id || d.from_uid)
+  } else if (d.event === 'read') {
+    chat.markReadByPeer(d.from_uid, d.up_to)
+  } else if (d.event === 'group_read') {
+    chat.markGroupRead(d.group_id, d.from_uid, d.up_to)
   } else if (d.event === 'blocked') {
     ElMessage.warning('消息发送失败：你已被对方拉黑或已拉黑对方')
   }

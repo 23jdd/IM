@@ -64,6 +64,18 @@ export function SendGroupText(groupId, content, mentions) {
 }
 
 /**
+ * SendRead 发送“已读”回执（走通知通道：Json 帧，action=read）。
+ * upTo 为已读到的最新消息时间戳（毫秒）。单聊传 toUid，群聊传 groupId。
+ * @param {string} toUid
+ * @param {string} groupId
+ * @param {number} upTo
+ * @returns {$CancellablePromise<void>}
+ */
+export function SendRead(toUid, groupId, upTo) {
+    return $Call.ByID(1116080821, toUid, groupId, upTo);
+}
+
+/**
  * SendText 发送单聊文本消息，body 为 {to_uid, content} 的 JSON。
  * 返回本条消息的 key，前端可用其匹配后续的 ack/nack。
  * @param {string} toUid

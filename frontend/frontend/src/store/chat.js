@@ -87,6 +87,30 @@ export const useChatStore = defineStore('chat', {
       this.typing = { ...this.typing, [uid]: Date.now() + 5000 }
     },
 
+    // 单聊已读：把发给 peer、且时间 <= upTo 的我方消息标记为已读。
+    markReadByPeer(peer, upTo) {
+      const arr = this.messages[peer]
+      if (!arr) return
+      for (const m of arr) {
+        if (m.self && m.status !== 'read' && (!upTo || (m.time && m.time <= upTo))) {
+          m.status = 'read'
+        }
+      }
+    },
+
+    // 群已读：把 reader 加入“已读”到 upTo 的我方群消息的阅读者集合（用于“N人已读”）。
+    markGroupRead(groupId, reader, upTo) {
+      if (!reader) return
+      const arr = this.messages[groupId]
+      if (!arr) return
+      for (const m of arr) {
+        if (m.self && (!upTo || (m.time && m.time <= upTo))) {
+          if (!m.readers) m.readers = []
+          if (!m.readers.includes(reader)) m.readers.push(reader)
+        }
+      }
+    },
+
     viewUser(uid) {
       if (!uid) return
       this.userCardUid = uid
