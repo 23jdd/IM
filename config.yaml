@@ -2,7 +2,7 @@ http_address: 127.0.0.1
 http_port: 8080
 tcp_address: 127.0.0.1
 tcp_port: 9000
-data_source: "root:1234@tcp(127.0.0.1:3306)/Im?parseTime=true&loc=UTC"
+data_source: "root:1234@tcp(127.0.0.1:3306)/AIm?parseTime=true&loc=UTC"
 mongo_uri: "mongodb://127.0.0.1:27017"
 mongo_db: "im"
 redis_addr: "192.168.116.130:6379"
