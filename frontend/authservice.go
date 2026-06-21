@@ -8,6 +8,7 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -187,6 +188,39 @@ func (a *AuthService) MessageRecall(token, msgId string) error {
 	return a.do(http.MethodPost, "/api/message/recall", token, map[string]string{
 		"msg_id": msgId,
 	}, nil)
+}
+
+type HistoryMessageInfo struct {
+	MsgId     string `json:"msg_id"`
+	FromUid   string `json:"from_uid"`
+	ToUid     string `json:"to_uid"`
+	GroupId   string `json:"group_id"`
+	MsgType   int    `json:"msg_type"`
+	Content   string `json:"content"`
+	Status    int    `json:"status"`
+	CreatedAt string `json:"created_at"`
+}
+
+// GetChatHistory 分页拉取历史消息。peer 与 group 二选一；before 为 unix 毫秒游标（0 表示最新一页）。
+func (a *AuthService) GetChatHistory(token, peer, group string, before int64, limit int) ([]HistoryMessageInfo, error) {
+	q := url.Values{}
+	if peer != "" {
+		q.Set("peer", peer)
+	}
+	if group != "" {
+		q.Set("group", group)
+	}
+	if before > 0 {
+		q.Set("before", strconv.FormatInt(before, 10))
+	}
+	if limit > 0 {
+		q.Set("limit", strconv.Itoa(limit))
+	}
+	var out []HistoryMessageInfo
+	if err := a.do(http.MethodGet, "/api/message/history?"+q.Encode(), token, nil, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 // GetFriends 获取好友列表。

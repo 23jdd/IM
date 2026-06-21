@@ -106,3 +106,11 @@ func MarkMessagesRead(ctx context.Context, msgIds []string) error {
 	_, err := MsgCol.UpdateMany(ctx, filter, update)
 	return err
 }
+
+// UpdateMessageStatus 更新归档消息的状态（如撤回 = 2），使历史翻页能反映撤回。
+func UpdateMessageStatus(ctx context.Context, msgId string, status byte) error {
+	filter := bson.D{{Key: "msg_id", Value: msgId}}
+	update := bson.D{{Key: "$set", Value: bson.D{{Key: "status", Value: status}}}}
+	_, err := MsgCol.UpdateMany(ctx, filter, update)
+	return err
+}

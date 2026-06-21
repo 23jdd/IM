@@ -2,6 +2,7 @@ package service
 
 import (
 	"IM/model"
+	"IM/mongdb"
 	"IM/mysql"
 	"IM/rabbitmq"
 	"IM/utils"
@@ -14,8 +15,11 @@ import (
 
 // 通过函数变量注入，便于测试。
 var (
-	findMessageById     = mysql.FindMessageById
-	updateMessageStatus = mysql.UpdateMessageStatus
+	findMessageById          = mysql.FindMessageById
+	updateMessageStatus      = mysql.UpdateMessageStatus
+	getChatHistoryMongo      = mongdb.GetChatHistory
+	getGroupChatHistoryMongo = mongdb.GetGroupChatHistory
+	updateMongoMessageStatus = mongdb.UpdateMessageStatus
 )
 
 const recallWindow = 2 * time.Minute
@@ -129,6 +133,50 @@ func GetConversations(ctx context.Context, uid string) ([]*ConversationItem, err
 	return out, nil
 }
 
+const (
+	defaultHistoryLimit int64 = 30
+	maxHistoryLimit     int64 = 100
+)
+
+// GetChatHistory 从归档库分页拉取历史消息（按 created_at 倒序）。
+// groupId 非空时拉群聊历史，否则拉 self 与 peer 的单聊历史；
+// before 为游标（仅返回早于该时间的消息），limit<=0 用默认值。
+func GetChatHistory(ctx context.Context, selfUid, peer, groupId string, before time.Time, limit int64) ([]*model.ChatMessage, error) {
+	if limit <= 0 {
+		limit = defaultHistoryLimit
+	}
+	if limit > maxHistoryLimit {
+		limit = maxHistoryLimit
+	}
+	var docs []*mongdb.MessageDoc
+	var err error
+	if groupId != "" {
+		docs, err = getGroupChatHistoryMongo(ctx, groupId, before, limit)
+	} else {
+		if peer == "" {
+			return nil, errors.New("peer required")
+		}
+		docs, err = getChatHistoryMongo(ctx, selfUid, peer, before, limit)
+	}
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*model.ChatMessage, 0, len(docs))
+	for _, d := range docs {
+		out = append(out, &model.ChatMessage{
+			MsgId:     d.MsgId,
+			FromUid:   d.FromUid,
+			ToUid:     d.ToUid,
+			GroupId:   d.GroupId,
+			MsgType:   d.MsgType,
+			Content:   d.Content,
+			Status:    d.Status,
+			CreatedAt: d.CreatedAt,
+		})
+	}
+	return out, nil
+}
+
 // RecallMessage 撤回自己 2 分钟内发送的消息，并通知相关方（群成员 / 单聊对端 + 自己多端）。
 func RecallMessage(ctx context.Context, uid, msgId string) error {
 	msg, err := findMessageById(ctx, msgId)
@@ -143,6 +191,10 @@ func RecallMessage(ctx context.Context, uid, msgId string) error {
 	}
 	if err := updateMessageStatus(ctx, msgId, model.MsgStatusRevoked); err != nil {
 		return err
+	}
+	// best-effort：同步更新归档库状态，使历史翻页也显示为已撤回。
+	if err := updateMongoMessageStatus(ctx, msgId, model.MsgStatusRevoked); err != nil {
+		log.Printf("recall: update mongo status failed for msg %s: %v", msgId, err)
 	}
 
 	if msg.GroupId != "" {

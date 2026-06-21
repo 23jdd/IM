@@ -19,6 +19,7 @@ export {
     GroupInfoData,
     GroupJoinRequestInfo,
     GroupMemberInfo,
+    HistoryMessageInfo,
     LocalMessage,
     LoginResult,
     MomentCommentInfo,

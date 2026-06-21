@@ -344,6 +344,83 @@ export class GroupMemberInfo {
     }
 }
 
+export class HistoryMessageInfo {
+    /**
+     * Creates a new HistoryMessageInfo instance.
+     * @param {Partial<HistoryMessageInfo>} [$$source = {}] - The source object to create the HistoryMessageInfo.
+     */
+    constructor($$source = {}) {
+        if (!("msg_id" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["msg_id"] = "";
+        }
+        if (!("from_uid" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["from_uid"] = "";
+        }
+        if (!("to_uid" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["to_uid"] = "";
+        }
+        if (!("group_id" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["group_id"] = "";
+        }
+        if (!("msg_type" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["msg_type"] = 0;
+        }
+        if (!("content" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["content"] = "";
+        }
+        if (!("status" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["status"] = 0;
+        }
+        if (!("created_at" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["created_at"] = "";
+        }
+
+        Object.assign(this, $$source);
+    }
+
+    /**
+     * Creates a new HistoryMessageInfo instance from a string or object.
+     * @param {any} [$$source = {}]
+     * @returns {HistoryMessageInfo}
+     */
+    static createFrom($$source = {}) {
+        let $$parsedSource = typeof $$source === 'string' ? JSON.parse($$source) : $$source;
+        return new HistoryMessageInfo(/** @type {Partial<HistoryMessageInfo>} */($$parsedSource));
+    }
+}
+
 export class LocalMessage {
     /**
      * Creates a new LocalMessage instance.

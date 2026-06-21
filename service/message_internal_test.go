@@ -101,7 +101,13 @@ func TestSendChatMessagePublishErrorIsNonFatal(t *testing.T) {
 func TestRecallMessageByOwnerWithinWindow(t *testing.T) {
 	origFind := findMessageById
 	origUpd := updateMessageStatus
-	defer func() { findMessageById = origFind; updateMessageStatus = origUpd; SetNotifier(nil) }()
+	origMongo := updateMongoMessageStatus
+	defer func() {
+		findMessageById = origFind
+		updateMessageStatus = origUpd
+		updateMongoMessageStatus = origMongo
+		SetNotifier(nil)
+	}()
 
 	findMessageById = func(ctx context.Context, msgId string) (*model.ChatMessage, error) {
 		return &model.ChatMessage{MsgId: msgId, FromUid: "me", ToUid: "b", CreatedAt: time.Now()}, nil
@@ -109,6 +115,9 @@ func TestRecallMessageByOwnerWithinWindow(t *testing.T) {
 	var newStatus byte = 99
 	updateMessageStatus = func(ctx context.Context, msgId string, status byte) error {
 		newStatus = status
+		return nil
+	}
+	updateMongoMessageStatus = func(ctx context.Context, msgId string, status byte) error {
 		return nil
 	}
 	notified := map[string]map[string]any{}

@@ -44,6 +44,13 @@ export const useChatStore = defineStore('chat', {
     activeMessages: (s) => s.messages[s.activeUid] || [],
     totalUnread: (s) =>
       s.conversations.reduce((sum, c) => sum + (c.unread || 0), 0),
+    // 返回某会话当前已加载的最早一条消息时间（毫秒），无则 0，用作翻页游标。
+    oldestMessageTime: (s) => (uid) => {
+      const arr = s.messages[uid] || []
+      let min = Infinity
+      for (const m of arr) if (m.time && m.time < min) min = m.time
+      return min === Infinity ? 0 : min
+    },
   },
 
   actions: {
@@ -248,6 +255,37 @@ export const useChatStore = defineStore('chat', {
           return
         }
       }
+    },
+
+    // 历史翻页：把归档库拉取的更早消息映射并前插到会话头部（按 msg_id 去重）。
+    prependHistory(uid, list) {
+      if (!uid || !Array.isArray(list) || !list.length) return 0
+      const arr = this.messages[uid] || (this.messages[uid] = [])
+      const seen = new Set()
+      for (const m of arr) {
+        if (m.id) seen.add(String(m.id))
+        if (m.msgId) seen.add(String(m.msgId))
+      }
+      const mapped = []
+      for (const d of list) {
+        const id = d.msg_id || ''
+        if (id && seen.has(String(id))) continue
+        const self = d.from_uid === this.selfUid
+        mapped.push({
+          id: id || nextId(),
+          fromUid: d.from_uid,
+          content: d.content || '',
+          time: parseTime(d.created_at),
+          self,
+          status: self ? 'sent' : 'recv',
+          recalled: d.status === 2,
+        })
+        if (id) seen.add(String(id))
+      }
+      if (!mapped.length) return 0
+      mapped.sort((a, b) => a.time - b.time)
+      this.messages[uid] = mapped.concat(arr)
+      return mapped.length
     },
 
     // 实时收到的文本：单聊按 from_uid 归属；群聊按 group_id 归属。

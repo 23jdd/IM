@@ -464,10 +464,75 @@ function scrollToBottom() {
   })
 }
 
+// 仅在切换会话或“尾部新增”消息时滚到底；前插历史不改变尾部 id，因此不会触发，避免位置跳动。
 watch(
-  () => [chat.activeUid, messages.value.length],
+  () => [
+    chat.activeUid,
+    messages.value.length ? messages.value[messages.value.length - 1].id : '',
+  ],
   () => scrollToBottom(),
   { flush: 'post' }
+)
+
+const loadingMore = ref(false)
+const historyExhausted = ref(false)
+const HISTORY_PAGE = 30
+
+async function loadMore() {
+  const c = conv.value
+  if (!c || loadingMore.value || historyExhausted.value) return
+  const el = scroller.value
+  const prevHeight = el ? el.scrollHeight : 0
+  const prevTop = el ? el.scrollTop : 0
+  const before = chat.oldestMessageTime(c.uid)
+  loadingMore.value = true
+  try {
+    const list =
+      (await api.messageHistory(
+        user.token,
+        c.isGroup ? '' : c.uid,
+        c.isGroup ? c.uid : '',
+        before,
+        HISTORY_PAGE
+      )) || []
+    const added = chat.prependHistory(c.uid, list)
+    if (list.length < HISTORY_PAGE) historyExhausted.value = true
+    if (added > 0) {
+      await nextTick()
+      const el2 = scroller.value
+      if (el2) el2.scrollTop = el2.scrollHeight - prevHeight + prevTop
+    }
+  } catch (e) {
+    /* ignore */
+  } finally {
+    loadingMore.value = false
+  }
+}
+
+function onMessagesScroll(e) {
+  if (e.target.scrollTop <= 40) loadMore()
+}
+
+// 切换会话时重置翻页状态；若本地无历史则从服务器拉首页。
+watch(
+  conv,
+  (c) => {
+    historyExhausted.value = false
+    loadingMore.value = false
+    if (!c) return
+    const uid = c.uid
+    setTimeout(() => {
+      if (
+        conv.value &&
+        conv.value.uid === uid &&
+        messages.value.length === 0 &&
+        !loadingMore.value
+      ) {
+        loadMore()
+      }
+    }, 250)
+  },
+  { immediate: true }
 )
 
 async function send() {
@@ -530,7 +595,11 @@ function onKeydown(e) {
         </el-button>
       </div>
 
-      <div ref="scroller" class="messages selectable">
+      <div ref="scroller" class="messages selectable" @scroll="onMessagesScroll">
+        <div v-if="loadingMore" class="history-tip">加载中…</div>
+        <div v-else-if="historyExhausted && messages.length" class="history-tip">
+          没有更多消息了
+        </div>
         <div
           v-for="m in messages"
           :key="m.id"
@@ -912,6 +981,12 @@ function onKeydown(e) {
   color: var(--wx-text-sub);
   font-size: 12px;
   margin-top: 30px;
+}
+.history-tip {
+  text-align: center;
+  color: var(--wx-text-sub);
+  font-size: 12px;
+  padding: 6px 0;
 }
 .input-area {
   border-top: 1px solid var(--wx-border);

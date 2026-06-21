@@ -5,7 +5,9 @@ import (
 	"IM/utils"
 	"encoding/base64"
 	"net/http"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -656,6 +658,34 @@ func RecallMessage(c *gin.Context) {
 		return
 	}
 	ok(c, nil)
+}
+
+// GetChatHistory 分页拉取历史消息。
+// 查询参数：peer（单聊对端，二选一）/ group（群聊）；before（unix 毫秒游标，可选）；limit（可选）。
+func GetChatHistory(c *gin.Context) {
+	uid := c.GetString("uid")
+	peer := c.Query("peer")
+	group := c.Query("group")
+	if peer == "" && group == "" {
+		fail(c, -1, "peer or group required")
+		return
+	}
+
+	var before time.Time
+	if ms, err := strconv.ParseInt(c.Query("before"), 10, 64); err == nil && ms > 0 {
+		before = time.UnixMilli(ms).UTC()
+	}
+	var limit int64
+	if n, err := strconv.ParseInt(c.Query("limit"), 10, 64); err == nil {
+		limit = n
+	}
+
+	msgs, err := service.GetChatHistory(c.Request.Context(), uid, peer, group, before, limit)
+	if err != nil {
+		fail(c, -1, err.Error())
+		return
+	}
+	ok(c, msgs)
 }
 
 func AuthMiddleware() gin.HandlerFunc {

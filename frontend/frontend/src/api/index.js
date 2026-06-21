@@ -12,6 +12,8 @@ export const api = {
   getProfile: (token) => AuthService.GetProfile(token),
   userInfo: (token, uid) => AuthService.UserInfo(token, uid),
   messageRecall: (token, msgId) => AuthService.MessageRecall(token, msgId),
+  messageHistory: (token, peer, group, before, limit) =>
+    AuthService.GetChatHistory(token, peer, group, before, limit),
   updateProfile: (token, profile) => AuthService.UpdateProfile(token, profile),
   changePassword: (token, oldPwd, newPwd) =>
     AuthService.ChangePassword(token, oldPwd, newPwd),

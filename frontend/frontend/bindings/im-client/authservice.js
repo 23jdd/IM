@@ -90,13 +90,28 @@ export function GetAvatarByUid(token, uid) {
 }
 
 /**
+ * GetChatHistory 分页拉取历史消息。peer 与 group 二选一；before 为 unix 毫秒游标（0 表示最新一页）。
+ * @param {string} token
+ * @param {string} peer
+ * @param {string} group
+ * @param {number} before
+ * @param {number} limit
+ * @returns {$CancellablePromise<$models.HistoryMessageInfo[]>}
+ */
+export function GetChatHistory(token, peer, group, before, limit) {
+    return $Call.ByID(2265014521, token, peer, group, before, limit).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType3($result);
+    }));
+}
+
+/**
  * GetConversations 获取会话列表（最近联系人）。
  * @param {string} token
  * @returns {$CancellablePromise<$models.ConversationInfo[]>}
  */
 export function GetConversations(token) {
     return $Call.ByID(2281367027, token).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType3($result);
+        return $$createType5($result);
     }));
 }
 
@@ -107,7 +122,7 @@ export function GetConversations(token) {
  */
 export function GetFriends(token) {
     return $Call.ByID(3765766454, token).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType5($result);
+        return $$createType7($result);
     }));
 }
 
@@ -118,7 +133,7 @@ export function GetFriends(token) {
  */
 export function GetProfile(token) {
     return $Call.ByID(588788746, token).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType7($result);
+        return $$createType9($result);
     }));
 }
 
@@ -153,7 +168,7 @@ export function GroupApprove(token, groupId, applicantUid) {
  */
 export function GroupCreate(token, name, description) {
     return $Call.ByID(390833698, token, name, description).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType9($result);
+        return $$createType11($result);
     }));
 }
 
@@ -175,7 +190,7 @@ export function GroupDisband(token, groupId) {
  */
 export function GroupInfo(token, groupId) {
     return $Call.ByID(1336094710, token, groupId).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType11($result);
+        return $$createType13($result);
     }));
 }
 
@@ -208,7 +223,7 @@ export function GroupJoin(token, groupId) {
  */
 export function GroupJoinRequests(token, groupId) {
     return $Call.ByID(1442796164, token, groupId).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType13($result);
+        return $$createType15($result);
     }));
 }
 
@@ -240,7 +255,7 @@ export function GroupLeave(token, groupId) {
  */
 export function GroupList(token) {
     return $Call.ByID(2313833298, token).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType14($result);
+        return $$createType16($result);
     }));
 }
 
@@ -252,7 +267,7 @@ export function GroupList(token) {
  */
 export function GroupMembers(token, groupId) {
     return $Call.ByID(943058937, token, groupId).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType16($result);
+        return $$createType18($result);
     }));
 }
 
@@ -298,7 +313,7 @@ export function GroupTransfer(token, groupId, targetUid) {
  */
 export function Login(uid, password) {
     return $Call.ByID(655276660, uid, password).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType18($result);
+        return $$createType20($result);
     }));
 }
 
@@ -352,7 +367,7 @@ export function MomentLike(token, momentId) {
  */
 export function MomentPublish(token, content, images) {
     return $Call.ByID(2613901478, token, content, images).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType20($result);
+        return $$createType22($result);
     }));
 }
 
@@ -363,7 +378,7 @@ export function MomentPublish(token, content, images) {
  */
 export function MomentTimeline(token) {
     return $Call.ByID(2506335140, token).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType21($result);
+        return $$createType23($result);
     }));
 }
 
@@ -377,7 +392,7 @@ export function MomentTimeline(token) {
  */
 export function Register(name, password, email, phone) {
     return $Call.ByID(3233095442, name, password, email, phone).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType23($result);
+        return $$createType25($result);
     }));
 }
 
@@ -430,34 +445,36 @@ export function UploadFile(token, dataBase64, contentType) {
  */
 export function UserInfo(token, uid) {
     return $Call.ByID(3553672432, token, uid).then(/** @type {($result: any) => any} */(($result) => {
-        return $$createType25($result);
+        return $$createType27($result);
     }));
 }
 
 // Private type creation functions
 const $$createType0 = $models.FriendRequestInfo.createFrom;
 const $$createType1 = $Create.Array($$createType0);
-const $$createType2 = $models.ConversationInfo.createFrom;
+const $$createType2 = $models.HistoryMessageInfo.createFrom;
 const $$createType3 = $Create.Array($$createType2);
-const $$createType4 = $models.FriendInfo.createFrom;
+const $$createType4 = $models.ConversationInfo.createFrom;
 const $$createType5 = $Create.Array($$createType4);
-const $$createType6 = $models.Profile.createFrom;
-const $$createType7 = $Create.Nullable($$createType6);
-const $$createType8 = $models.GroupBrief.createFrom;
+const $$createType6 = $models.FriendInfo.createFrom;
+const $$createType7 = $Create.Array($$createType6);
+const $$createType8 = $models.Profile.createFrom;
 const $$createType9 = $Create.Nullable($$createType8);
-const $$createType10 = $models.GroupInfoData.createFrom;
+const $$createType10 = $models.GroupBrief.createFrom;
 const $$createType11 = $Create.Nullable($$createType10);
-const $$createType12 = $models.GroupJoinRequestInfo.createFrom;
-const $$createType13 = $Create.Array($$createType12);
-const $$createType14 = $Create.Array($$createType8);
-const $$createType15 = $models.GroupMemberInfo.createFrom;
-const $$createType16 = $Create.Array($$createType15);
-const $$createType17 = $models.LoginResult.createFrom;
-const $$createType18 = $Create.Nullable($$createType17);
-const $$createType19 = $models.MomentInfo.createFrom;
+const $$createType12 = $models.GroupInfoData.createFrom;
+const $$createType13 = $Create.Nullable($$createType12);
+const $$createType14 = $models.GroupJoinRequestInfo.createFrom;
+const $$createType15 = $Create.Array($$createType14);
+const $$createType16 = $Create.Array($$createType10);
+const $$createType17 = $models.GroupMemberInfo.createFrom;
+const $$createType18 = $Create.Array($$createType17);
+const $$createType19 = $models.LoginResult.createFrom;
 const $$createType20 = $Create.Nullable($$createType19);
-const $$createType21 = $Create.Array($$createType19);
-const $$createType22 = $models.RegisterResult.createFrom;
-const $$createType23 = $Create.Nullable($$createType22);
-const $$createType24 = $models.UserBriefInfo.createFrom;
+const $$createType21 = $models.MomentInfo.createFrom;
+const $$createType22 = $Create.Nullable($$createType21);
+const $$createType23 = $Create.Array($$createType21);
+const $$createType24 = $models.RegisterResult.createFrom;
 const $$createType25 = $Create.Nullable($$createType24);
+const $$createType26 = $models.UserBriefInfo.createFrom;
+const $$createType27 = $Create.Nullable($$createType26);
