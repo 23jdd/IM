@@ -29,6 +29,7 @@ type TextChatPayload struct {
 // 使接收端能正确归属消息（修复"实时帧丢失 from_uid"问题）。群聊时带 group_id。
 type RealtimeTextPayload struct {
 	FromUid   string    `json:"from_uid"`
+	ToUid     string    `json:"to_uid,omitempty"`
 	GroupId   string    `json:"group_id,omitempty"`
 	MsgId     string    `json:"msg_id"`
 	Content   string    `json:"content"`
@@ -39,6 +40,19 @@ type RealtimeTextPayload struct {
 func BuildRealtimeText(fromUid, msgId, content string, createdAt time.Time) []byte {
 	data, _ := json.Marshal(RealtimeTextPayload{
 		FromUid:   fromUid,
+		MsgId:     msgId,
+		Content:   content,
+		CreatedAt: createdAt,
+	})
+	return data
+}
+
+// BuildRealtimeTextTo 构造带接收方的单聊实时文本帧体（JSON）。
+// 携带 to_uid，使发送者的其他在线端能正确归属并把消息显示为“自己发出”（多端同步）。
+func BuildRealtimeTextTo(fromUid, toUid, msgId, content string, createdAt time.Time) []byte {
+	data, _ := json.Marshal(RealtimeTextPayload{
+		FromUid:   fromUid,
+		ToUid:     toUid,
 		MsgId:     msgId,
 		Content:   content,
 		CreatedAt: createdAt,
@@ -100,13 +114,13 @@ func ChatMessageHandler(m *Message.Message, c *Client) {
 	c.Send(Message.NewMessage(Message.ACK, m.GetKey(), []byte(msg.MsgId)))
 	c.finished = true // 已消费，短路 Echo，避免把发送帧回显给发送方
 
-	err = c.server.RouteTo(payload.ToUid, Message.NewMessage(
-		Message.Text, 0,
-		BuildRealtimeText(c.UID(), msg.MsgId, msg.Content, msg.CreatedAt),
-	))
-	if err != nil {
+	frame := Message.NewMessage(Message.Text, 0,
+		BuildRealtimeTextTo(c.UID(), payload.ToUid, msg.MsgId, msg.Content, msg.CreatedAt))
+	if err := c.server.RouteTo(payload.ToUid, frame); err != nil {
 		log.Printf("chat: route to %s failed (offline): %v", payload.ToUid, err)
 	}
+	// 多端同步：把自己发出的消息也投递给本端其他在线设备（排除发送连接）。
+	c.server.RouteToOthers(c.UID(), c, frame)
 }
 
 // handleGroupMessage 处理群聊：持久化群消息并扇出给所有在线群成员（跳过发送者）。
@@ -150,6 +164,8 @@ func handleGroupMessage(m *Message.Message, c *Client, payload TextChatPayload) 
 			log.Printf("group: route to %s failed (offline): %v", mem.Uid, err)
 		}
 	}
+	// 多端同步：群消息也投递给发送者本端其他在线设备（排除发送连接）。
+	c.server.RouteToOthers(c.UID(), c, frame)
 
 	// @提醒：给被 @ 的在群成员额外推一条 mention 通知（在线即时弹出）。
 	if len(payload.Mentions) > 0 {

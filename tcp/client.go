@@ -162,8 +162,9 @@ func (c *Client) Close() {
 		close(c.quit)
 		uid := c.UID()
 		if uid != "" {
-			c.server.clients.Delete(uid)
-			if c.server.presence != nil {
+			// 多端在线：仅当该 uid 已无任何连接时才标记离线。
+			empty := c.server.removeClient(uid, c)
+			if empty && c.server.presence != nil {
 				_ = c.server.presence.SetOffline(context.Background(), uid, c.server.instanceID)
 			}
 		}

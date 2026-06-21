@@ -39,7 +39,7 @@ func Verify(m *Message.Message, c *Client) {
 	}
 
 	c.setUID(claim.Uid)
-	c.server.clients.Store(claim.Uid, c)
+	c.server.addClient(claim.Uid, c)
 	if c.server.presence != nil {
 		_ = c.server.presence.SetOnline(context.Background(), claim.Uid, c.server.instanceID)
 	}

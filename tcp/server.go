@@ -92,12 +92,22 @@ func (s *Server) ShutDown() {
 		s.listener.Close()
 	}
 
-	s.clients.Range(func(key, value any) bool {
-		if c, ok := value.(*Client); ok {
-			c.Close()
+	// 先快照所有连接再逐个关闭：Close 内部会回调 removeClient 加写锁，
+	// 不能在持有 connSet 读锁时调用，故收集后在锁外关闭。
+	var all []*Client
+	s.clients.Range(func(_, value any) bool {
+		if cs, ok := value.(*connSet); ok {
+			cs.mu.RLock()
+			for c := range cs.m {
+				all = append(all, c)
+			}
+			cs.mu.RUnlock()
 		}
 		return true
 	})
+	for _, c := range all {
+		c.Close()
+	}
 
 	s.workerPool.Release()
 	log.Println("server stopped")
@@ -108,11 +118,15 @@ func (s *Server) AddHandler(h Handler) {
 }
 
 func (s *Server) RouteTo(uid string, m *Message.Message) error {
-	// 1) 目标在本实例：直接投递。
-	if val, ok := s.clients.Load(uid); ok {
-		if c, ok := val.(*Client); ok {
-			return c.Send(m)
+	// 1) 目标在本实例：投递给其所有在线连接（多端在线）。
+	if locals := s.localClients(uid); len(locals) > 0 {
+		var firstErr error
+		for _, c := range locals {
+			if err := c.Send(m); err != nil && firstErr == nil {
+				firstErr = err
+			}
 		}
+		return firstErr
 	}
 
 	// 2) 目标在其他实例：经在线表查到实例并跨实例转发。
@@ -126,22 +140,24 @@ func (s *Server) RouteTo(uid string, m *Message.Message) error {
 	return fmt.Errorf("client %s not online", uid)
 }
 
-// DeliverLocal 将一条已编码的帧投递给本实例上的目标客户端，
+// DeliverLocal 将一条已编码的帧投递给本实例上该 uid 的所有连接，
 // 由跨实例转发的接收端（订阅循环）调用。
 func (s *Server) DeliverLocal(uid string, frame []byte) error {
-	val, ok := s.clients.Load(uid)
-	if !ok {
+	locals := s.localClients(uid)
+	if len(locals) == 0 {
 		return fmt.Errorf("client %s not on this instance", uid)
-	}
-	c, ok := val.(*Client)
-	if !ok {
-		return fmt.Errorf("invalid client type for %s", uid)
 	}
 	msg, err := Message.Decode(frame)
 	if err != nil {
 		return err
 	}
-	return c.Send(msg)
+	var firstErr error
+	for _, c := range locals {
+		if err := c.Send(msg); err != nil && firstErr == nil {
+			firstErr = err
+		}
+	}
+	return firstErr
 }
 
 // SetInstanceID 设置本实例标识（用于跨实例路由区分自身）。
@@ -157,16 +173,73 @@ func (s *Server) SetPresence(p Presence) { s.presence = p }
 func (s *Server) SetForwarder(f Forwarder) { s.forwarder = f }
 
 func (s *Server) Register(uid string, c *Client) {
-	s.clients.Store(uid, c)
+	s.addClient(uid, c)
 }
 
 func (s *Server) Lookup(uid string) (*Client, bool) {
-	val, ok := s.clients.Load(uid)
-	if !ok {
+	locals := s.localClients(uid)
+	if len(locals) == 0 {
 		return nil, false
 	}
-	c, ok := val.(*Client)
-	return c, ok
+	return locals[0], true
+}
+
+// connSet 持有同一 uid 的多条连接（多端在线），并发安全。
+type connSet struct {
+	mu sync.RWMutex
+	m  map[*Client]struct{}
+}
+
+// addClient 把连接加入该 uid 的连接集合（支持同账号多端在线）。
+func (s *Server) addClient(uid string, c *Client) {
+	val, _ := s.clients.LoadOrStore(uid, &connSet{m: make(map[*Client]struct{})})
+	cs := val.(*connSet)
+	cs.mu.Lock()
+	cs.m[c] = struct{}{}
+	cs.mu.Unlock()
+}
+
+// removeClient 从该 uid 的集合移除连接；返回该 uid 是否已无任何在线连接。
+func (s *Server) removeClient(uid string, c *Client) bool {
+	val, ok := s.clients.Load(uid)
+	if !ok {
+		return true
+	}
+	cs := val.(*connSet)
+	cs.mu.Lock()
+	delete(cs.m, c)
+	empty := len(cs.m) == 0
+	cs.mu.Unlock()
+	if empty {
+		s.clients.Delete(uid)
+	}
+	return empty
+}
+
+// localClients 返回该 uid 在本实例上的所有连接快照。
+func (s *Server) localClients(uid string) []*Client {
+	val, ok := s.clients.Load(uid)
+	if !ok {
+		return nil
+	}
+	cs := val.(*connSet)
+	cs.mu.RLock()
+	out := make([]*Client, 0, len(cs.m))
+	for c := range cs.m {
+		out = append(out, c)
+	}
+	cs.mu.RUnlock()
+	return out
+}
+
+// RouteToOthers 把帧投递给该 uid 在本实例上、除 except 外的其他连接（多端同步）。
+func (s *Server) RouteToOthers(uid string, except *Client, m *Message.Message) {
+	for _, c := range s.localClients(uid) {
+		if c == except {
+			continue
+		}
+		_ = c.Send(m)
+	}
 }
 
 func NotifyServer(s *Server) {

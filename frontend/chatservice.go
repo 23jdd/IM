@@ -231,6 +231,7 @@ func (s *ChatService) dispatch(t byte, key uint32, body []byte) {
 		// 兼容旧格式：解析失败则按裸文本处理（from_uid 为空）。
 		var p struct {
 			FromUid string `json:"from_uid"`
+			ToUid   string `json:"to_uid"`
 			GroupId string `json:"group_id"`
 			MsgId   string `json:"msg_id"`
 			Content string `json:"content"`
@@ -239,6 +240,7 @@ func (s *ChatService) dispatch(t byte, key uint32, body []byte) {
 			s.emit("im:text", map[string]any{
 				"key":      key,
 				"from_uid": p.FromUid,
+				"to_uid":   p.ToUid,
 				"group_id": p.GroupId,
 				"msg_id":   p.MsgId,
 				"content":  p.Content,

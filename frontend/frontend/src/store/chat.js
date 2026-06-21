@@ -339,6 +339,10 @@ export const useChatStore = defineStore('chat', {
       if (groupId) {
         uid = groupId
         self = from === this.selfUid
+      } else if (from && from === this.selfUid) {
+        // 自己其他端发出的单聊消息（多端同步）：归属到对端 to_uid，标记为自己发出。
+        uid = (payload && payload.to_uid) || this.activeUid || '__unknown__'
+        self = true
       } else {
         uid = from || this.activeUid || '__unknown__'
         self = false
