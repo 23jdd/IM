@@ -146,7 +146,13 @@ onMounted(loadRequests)
 
       <div class="section-title">好友 ({{ contacts.length }})</div>
       <div v-for="c in contacts" :key="c.uid" class="item" @click="openFriend(c)">
-        <Avatar :uid="c.uid" :name="c.name" :size="38" />
+        <Avatar
+          :uid="c.uid"
+          :name="c.name"
+          :size="38"
+          style="cursor: pointer"
+          @click.stop="chat.viewUser(c.uid)"
+        />
         <div class="info">
           <div class="name">{{ c.name }}</div>
         </div>

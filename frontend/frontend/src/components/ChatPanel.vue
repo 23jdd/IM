@@ -358,6 +358,8 @@ function onKeydown(e) {
             :uid="m.fromUid || (m.self ? user.uid : conv.uid)"
             :name="senderName(m.fromUid || (m.self ? user.uid : conv.uid))"
             :size="38"
+            class="clickable-avatar"
+            @click="chat.viewUser(m.fromUid || (m.self ? user.uid : conv.uid))"
           />
           <div class="bubble-wrap">
             <div v-if="conv.isGroup && !m.self" class="sender-name">
@@ -474,7 +476,13 @@ function onKeydown(e) {
           </div>
         </div>
         <div v-for="mem in members" :key="mem.uid" class="member-row">
-          <Avatar :uid="mem.uid" :name="mem.nickname || mem.uid" :size="34" />
+          <Avatar
+            :uid="mem.uid"
+            :name="mem.nickname || mem.uid"
+            :size="34"
+            class="clickable-avatar"
+            @click="chat.viewUser(mem.uid)"
+          />
           <div class="member-info">
             <div class="member-name">{{ mem.nickname || mem.uid }}</div>
             <div class="member-uid">UID: {{ mem.uid }}</div>
@@ -586,6 +594,9 @@ function onKeydown(e) {
   font-size: 11px;
   color: var(--wx-text-sub);
   margin-bottom: 2px;
+}
+.clickable-avatar {
+  cursor: pointer;
 }
 .msg-row.self .bubble-wrap {
   flex-direction: row-reverse;

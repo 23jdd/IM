@@ -81,6 +81,14 @@ async function confirm() {
 function select(uid) {
   chat.setActive(uid)
 }
+
+function onAvatarClick(c) {
+  if (c.isGroup) {
+    chat.setActive(c.uid)
+  } else {
+    chat.viewUser(c.uid)
+  }
+}
 </script>
 
 <template>
@@ -113,7 +121,14 @@ function select(uid) {
         @click="select(c.uid)"
       >
         <el-badge :value="c.unread" :hidden="!c.unread" class="badge">
-          <Avatar :uid="c.uid" :name="c.name" :group="c.isGroup" :size="40" />
+          <Avatar
+            :uid="c.uid"
+            :name="c.name"
+            :group="c.isGroup"
+            :size="40"
+            style="cursor: pointer"
+            @click.stop="onAvatarClick(c)"
+          />
         </el-badge>
         <div class="meta">
           <div class="row1">

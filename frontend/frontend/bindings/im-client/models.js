@@ -692,6 +692,20 @@ export class UserBriefInfo {
              */
             this["avatar"] = "";
         }
+        if (!("gender" in $$source)) {
+            /**
+             * @member
+             * @type {number}
+             */
+            this["gender"] = 0;
+        }
+        if (!("signature" in $$source)) {
+            /**
+             * @member
+             * @type {string}
+             */
+            this["signature"] = "";
+        }
 
         Object.assign(this, $$source);
     }

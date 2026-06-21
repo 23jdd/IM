@@ -32,6 +32,8 @@ export const useChatStore = defineStore('chat', {
     friends: [], // {uid, name, avatar}
     avatarCache: {}, // uid -> dataUrl ('' 表示无头像)
     friendRequests: [], // 收到的好友申请
+    userCardVisible: false, // 用户信息卡片
+    userCardUid: '',
   }),
 
   getters: {
@@ -59,6 +61,12 @@ export const useChatStore = defineStore('chat', {
 
     setFriendRequests(list) {
       this.friendRequests = list || []
+    },
+
+    viewUser(uid) {
+      if (!uid) return
+      this.userCardUid = uid
+      this.userCardVisible = true
     },
 
     setFriends(list) {

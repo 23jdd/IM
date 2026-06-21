@@ -166,9 +166,11 @@ type FriendInfo struct {
 }
 
 type UserBriefInfo struct {
-	Uid    string `json:"uid"`
-	Name   string `json:"name"`
-	Avatar string `json:"avatar"`
+	Uid       string `json:"uid"`
+	Name      string `json:"name"`
+	Avatar    string `json:"avatar"`
+	Gender    int    `json:"gender"`
+	Signature string `json:"signature"`
 }
 
 // UserInfo 按 uid 查询用户公开信息（搜索添加好友前预览）。

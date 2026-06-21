@@ -8,6 +8,7 @@ import ContactsPanel from '../components/ContactsPanel.vue'
 import ChatPanel from '../components/ChatPanel.vue'
 import ProfileDialog from '../components/ProfileDialog.vue'
 import Moments from '../components/Moments.vue'
+import UserCard from '../components/UserCard.vue'
 import { api, onEvent, EVT } from '../api'
 import { useUserStore } from '../store/user'
 import { useChatStore } from '../store/chat'
@@ -158,7 +159,11 @@ function onChangeView(v) {
   activeView.value = v
 }
 
-function onOpenChat(uid) {
+function onOpenChat(payload) {
+  const uid = typeof payload === 'string' ? payload : payload && payload.uid
+  const name = typeof payload === 'string' ? undefined : payload && payload.name
+  if (!uid) return
+  chat.ensureConversation(uid, name)
   chat.setActive(uid)
   activeView.value = 'chats'
 }
@@ -230,6 +235,12 @@ onUnmounted(() => {
     <Moments v-if="activeView === 'moments'" class="main-col" />
 
     <ProfileDialog v-model="profileVisible" />
+    <UserCard
+      :model-value="chat.userCardVisible"
+      :uid="chat.userCardUid"
+      @update:model-value="chat.userCardVisible = $event"
+      @open-chat="onOpenChat"
+    />
   </div>
 </template>
 
