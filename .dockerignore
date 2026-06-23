@@ -1,0 +1,12 @@
+.git
+.idea
+frontend
+logs
+log/*.log
+*.log
+Tests
+README.md
+LICENSE
+Dockerfile
+.dockerignore
+docker-compose.yml

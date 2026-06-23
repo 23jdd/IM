@@ -1,0 +1,17 @@
+http_address: 0.0.0.0
+http_port: 8080
+tcp_address: 0.0.0.0
+tcp_port: 9000
+data_source: "root:1234@tcp(mysql:3306)/AIm?parseTime=true&loc=UTC"
+mongo_uri: "mongodb://mongo:27017"
+mongo_db: "im"
+redis_addr: "redis:6379"
+redis_password: "1234"
+redis_db: 0
+rabbitmq_url: "amqp://guest:guest@rabbitmq:5672/"
+log_path: "logs/im.log"
+log_level: "info"
+gateway_port: 8000
+jwt_secret: "change-me-in-production"
+backend_addrs:
+  - "127.0.0.1:9000"

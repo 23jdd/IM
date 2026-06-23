@@ -22,6 +22,8 @@ type ChatService struct {
 	conn net.Conn
 	key  uint32
 
+	defaultAddr string
+
 	connectedMu sync.RWMutex
 	connected   bool
 }
@@ -32,6 +34,11 @@ func NewChatService() *ChatService {
 
 func (s *ChatService) SetApp(app *application.App) {
 	s.app = app
+}
+
+// SetDefaultAddr 设置 Connect("") 时使用的默认后端 TCP 地址（由命令行 flag 决定）。
+func (s *ChatService) SetDefaultAddr(addr string) {
+	s.defaultAddr = addr
 }
 
 func (s *ChatService) emit(name string, data any) {
@@ -60,6 +67,9 @@ func (s *ChatService) setConnected(v bool) {
 func (s *ChatService) Connect(addr string) error {
 	if s.isConnected() {
 		return nil
+	}
+	if addr == "" {
+		addr = s.defaultAddr
 	}
 	if addr == "" {
 		addr = "127.0.0.1:9000"
