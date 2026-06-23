@@ -106,6 +106,15 @@ export function SetApp(app) {
 }
 
 /**
+ * SetDefaultAddr 设置 Connect("") 时使用的默认后端 TCP 地址（由命令行 flag 决定）。
+ * @param {string} addr
+ * @returns {$CancellablePromise<void>}
+ */
+export function SetDefaultAddr(addr) {
+    return $Call.ByID(2468127873, addr);
+}
+
+/**
  * Sync 触发离线消息同步（发送 Json 帧）。
  * @returns {$CancellablePromise<void>}
  */

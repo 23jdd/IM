@@ -68,7 +68,8 @@ func (s *ChatService) Connect(addr string) error {
 	if s.isConnected() {
 		return nil
 	}
-	if addr == "" {
+	// 命令行 flag 指定的地址优先，忽略前端传入的硬编码地址。
+	if s.defaultAddr != "" {
 		addr = s.defaultAddr
 	}
 	if addr == "" {

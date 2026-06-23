@@ -99,6 +99,7 @@ CREATE TABLE IF NOT EXISTS §group_info§ (
     §avatar§       VARCHAR(512)  NOT NULL DEFAULT '',
     §owner_uid§    VARCHAR(20)   NOT NULL,
     §description§  VARCHAR(512)  NOT NULL DEFAULT '',
+    §announcement§ VARCHAR(1024) NOT NULL DEFAULT '' COMMENT '群公告',
     §member_count§ INT UNSIGNED  NOT NULL DEFAULT 0,
     §status§       TINYINT       NOT NULL DEFAULT 0,
     §created_at§   DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
