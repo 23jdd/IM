@@ -5,6 +5,10 @@ FROM golang:1.26-alpine AS builder
 
 WORKDIR /src
 
+# Use a China-friendly Go module proxy to speed up downloads
+ENV GOPROXY=https://goproxy.cn,direct \
+    GOSUMDB=off
+
 # Cache dependencies first
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod \
@@ -21,7 +25,9 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 # ---- Runtime stage ----
 FROM alpine:3.20
 
-RUN apk add --no-cache ca-certificates tzdata && \
+# Use a China mirror for apk to speed up package installation
+RUN sed -i 's#https\?://dl-cdn.alpinelinux.org#https://mirrors.aliyun.com#g' /etc/apk/repositories && \
+    apk add --no-cache ca-certificates tzdata && \
     adduser -D -u 10001 appuser
 
 WORKDIR /app
