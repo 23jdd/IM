@@ -2,15 +2,17 @@ package model
 
 import "time"
 
+// 群成员角色与群状态常量
 const (
-	GroupRoleMember byte = 0
-	GroupRoleAdmin  byte = 1
-	GroupRoleOwner  byte = 2
+	GroupRoleMember byte = 0 // 普通成员
+	GroupRoleAdmin  byte = 1 // 管理员
+	GroupRoleOwner  byte = 2 // 群主
 
-	GroupStatusNormal    byte = 0
-	GroupStatusDisbanded byte = 1
+	GroupStatusNormal    byte = 0 // 正常
+	GroupStatusDisbanded byte = 1 // 已解散
 )
 
+// GroupInfo 表示群的基本信息。
 type GroupInfo struct {
 	GroupId      string    `db:"group_id" json:"group_id"`
 	Name         string    `db:"name" json:"name"`
@@ -24,6 +26,7 @@ type GroupInfo struct {
 	UpdatedAt    time.Time `db:"updated_at" json:"updated_at"`
 }
 
+// GroupMember 表示一条群成员记录。
 type GroupMember struct {
 	Id        uint64     `db:"id" json:"id"`
 	GroupId   string     `db:"group_id" json:"group_id"`

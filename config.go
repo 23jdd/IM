@@ -5,6 +5,7 @@ import (
 	"github.com/spf13/viper"
 )
 
+// Config 应用配置结构体，对应 config.yaml 中的各项配置
 type Config struct {
 	HttpAddress   string `yaml:"http_address"`
 	HttpPort      int    `yaml:"http_port"`
@@ -24,6 +25,7 @@ type Config struct {
 	JWTSecret     string `yaml:"jwt_secret"`
 }
 
+// MustLoadConfig 从指定路径加载 config.yaml 配置文件，加载或解析失败时直接 panic
 func MustLoadConfig(configPath string) *Config {
 	v := viper.New()
 	if configPath != "" {
@@ -38,6 +40,7 @@ func MustLoadConfig(configPath string) *Config {
 	}
 
 	var c Config
+	// 指定使用 yaml 标签进行字段映射（默认是 mapstructure 标签）
 	if err := v.Unmarshal(&c, viper.DecoderConfigOption(func(config *mapstructure.DecoderConfig) {
 		config.TagName = "yaml"
 	})); err != nil {

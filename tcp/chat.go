@@ -18,6 +18,7 @@ var (
 	isBlocked          = service.IsBlocked
 )
 
+// TextChatPayload 客户端发送的聊天帧体：单聊填 to_uid，群聊填 group_id，可带 @mentions。
 type TextChatPayload struct {
 	ToUid    string   `json:"to_uid"`
 	GroupId  string   `json:"group_id"`
@@ -72,6 +73,7 @@ func BuildGroupText(fromUid, groupId, msgId, content string, createdAt time.Time
 	return data
 }
 
+// ChatMessageHandler 处理客户端文本聊天帧：区分群聊/单聊，落库后实时投递并回 ACK。
 func ChatMessageHandler(m *Message.Message, c *Client) {
 	var payload TextChatPayload
 	if err := json.Unmarshal(m.Data, &payload); err != nil {
@@ -187,6 +189,7 @@ func handleGroupMessage(m *Message.Message, c *Client, payload TextChatPayload) 
 	}
 }
 
+// OfflineSyncHandler 处理 Json 帧：分流 typing/read 实时信号，否则拉取并下发离线消息。
 func OfflineSyncHandler(m *Message.Message, c *Client) {
 	c.finished = true // 同步请求已消费，短路 Echo
 
@@ -293,6 +296,7 @@ func AckHandler(m *Message.Message, c *Client) {
 	}
 }
 
+// init 注册各消息类型对应的业务处理器。
 func init() {
 	RegisterRoute(Message.Text, ChatMessageHandler)
 	RegisterRoute(Message.Json, OfflineSyncHandler)

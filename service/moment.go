@@ -22,6 +22,7 @@ var (
 	getFriendUids    = defaultFriendUids
 )
 
+// defaultFriendUids 返回 uid 的好友 uid 列表（朋友圈可见范围默认实现）。
 func defaultFriendUids(ctx context.Context, uid string) ([]string, error) {
 	friends, err := mysql.FindFriends(ctx, uid)
 	if err != nil {

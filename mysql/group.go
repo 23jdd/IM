@@ -8,12 +8,15 @@ import (
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
+// groupConn 群组相关表使用的数据库连接（复用消息库连接）。
 var groupConn sqlx.SqlConn
 
+// InitGroupConn 初始化群组模块的数据库连接，直接复用 msgConn。
 func InitGroupConn(dataSource string) {
 	groupConn = msgConn
 }
 
+// InsertGroup 插入一条群信息记录（创建群时调用）。
 func InsertGroup(ctx context.Context, g *model.GroupInfo) error {
 	query := `INSERT INTO group_info (group_id, name, avatar, owner_uid, description, announcement, member_count, status, created_at, updated_at)
 	           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
@@ -24,6 +27,7 @@ func InsertGroup(ctx context.Context, g *model.GroupInfo) error {
 	return err
 }
 
+// FindGroup 按 groupId 查询群信息。
 func FindGroup(ctx context.Context, groupId string) (*model.GroupInfo, error) {
 	query := `SELECT group_id, name, avatar, owner_uid, description, announcement, member_count, status, created_at, updated_at
 	           FROM group_info WHERE group_id = ?`
@@ -35,6 +39,7 @@ func FindGroup(ctx context.Context, groupId string) (*model.GroupInfo, error) {
 	return &g, nil
 }
 
+// InsertGroupMember 插入一条群成员记录（成员入群时调用）。
 func InsertGroupMember(ctx context.Context, m *model.GroupMember) error {
 	query := `INSERT INTO group_member (group_id, uid, role, nickname, joined_at)
 	           VALUES (?, ?, ?, ?, ?)`
@@ -42,6 +47,7 @@ func InsertGroupMember(ctx context.Context, m *model.GroupMember) error {
 	return err
 }
 
+// FindGroupMembers 查询某群的全部成员。
 func FindGroupMembers(ctx context.Context, groupId string) ([]*model.GroupMember, error) {
 	query := `SELECT id, group_id, uid, role, nickname, mute_until, joined_at
 	           FROM group_member WHERE group_id = ?`
@@ -53,6 +59,7 @@ func FindGroupMembers(ctx context.Context, groupId string) ([]*model.GroupMember
 	return members, nil
 }
 
+// FindUserGroups 查询某用户加入的全部群成员记录。
 func FindUserGroups(ctx context.Context, uid string) ([]*model.GroupMember, error) {
 	query := `SELECT id, group_id, uid, role, nickname, mute_until, joined_at
 	           FROM group_member WHERE uid = ?`
@@ -64,12 +71,14 @@ func FindUserGroups(ctx context.Context, uid string) ([]*model.GroupMember, erro
 	return members, nil
 }
 
+// DeleteGroupMember 删除群成员（退群或被踢时调用）。
 func DeleteGroupMember(ctx context.Context, groupId, uid string) error {
 	query := `DELETE FROM group_member WHERE group_id = ? AND uid = ?`
 	_, err := groupConn.ExecCtx(ctx, query, groupId, uid)
 	return err
 }
 
+// UpdateGroupMemberRole 更新群成员的角色（如设置/取消管理员）。
 func UpdateGroupMemberRole(ctx context.Context, groupId, uid string, role byte) error {
 	query := `UPDATE group_member SET role = ? WHERE group_id = ? AND uid = ?`
 	_, err := groupConn.ExecCtx(ctx, query, role, groupId, uid)

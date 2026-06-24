@@ -19,6 +19,7 @@ type AuthService struct {
 	client  *http.Client
 }
 
+// NewAuthService 创建鉴权服务实例，默认指向本地后端 :8080。
 func NewAuthService() *AuthService {
 	return &AuthService{
 		baseURL: "http://127.0.0.1:8080",
@@ -33,12 +34,14 @@ func (a *AuthService) SetBaseURL(url string) {
 	}
 }
 
+// apiResponse 后端统一响应结构：code 为 0 表示成功，data 为业务数据原文。
 type apiResponse struct {
 	Code int             `json:"code"`
 	Msg  string          `json:"msg"`
 	Data json.RawMessage `json:"data"`
 }
 
+// do 发起一次 HTTP 请求并解析统一响应：body 为请求体，out 接收 data 反序列化结果。
 func (a *AuthService) do(method, path, token string, body any, out any) error {
 	var reader io.Reader
 	if body != nil {
@@ -55,6 +58,7 @@ func (a *AuthService) do(method, path, token string, body any, out any) error {
 	}
 	req.Header.Set("Content-Type", "application/json")
 	if token != "" {
+		// 已登录请求携带 JWT 进行鉴权
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
@@ -70,6 +74,7 @@ func (a *AuthService) do(method, path, token string, body any, out any) error {
 		return fmt.Errorf("响应解析失败: %s", string(raw))
 	}
 	if r.Code != 0 {
+		// 业务错误：直接以后端返回的 msg 作为错误信息
 		return errors.New(r.Msg)
 	}
 	if out != nil && len(r.Data) > 0 {
@@ -78,6 +83,7 @@ func (a *AuthService) do(method, path, token string, body any, out any) error {
 	return nil
 }
 
+// RegisterResult 注册结果，包含后端分配的用户 uid。
 type RegisterResult struct {
 	Uid string `json:"uid"`
 }
@@ -97,6 +103,7 @@ func (a *AuthService) Register(name, password, email, phone string) (*RegisterRe
 	return &out, nil
 }
 
+// LoginResult 登录结果，包含 JWT token 及基本身份信息。
 type LoginResult struct {
 	Token string `json:"token"`
 	Uid   string `json:"uid"`
@@ -116,6 +123,7 @@ func (a *AuthService) Login(uid, password string) (*LoginResult, error) {
 	return &out, nil
 }
 
+// Profile 用户完整资料。
 type Profile struct {
 	Uid       string `json:"uid"`
 	Name      string `json:"name"`
@@ -159,6 +167,7 @@ func (a *AuthService) ChangePassword(token, oldPassword, newPassword string) err
 	}, nil)
 }
 
+// FriendInfo 好友列表项（含本地备注与对方昵称、头像）。
 type FriendInfo struct {
 	Uid    string `json:"uid"`
 	Remark string `json:"remark"`
@@ -166,6 +175,7 @@ type FriendInfo struct {
 	Avatar string `json:"avatar"`
 }
 
+// UserBriefInfo 用户公开简要信息（搜索添加好友时的预览）。
 type UserBriefInfo struct {
 	Uid       string `json:"uid"`
 	Name      string `json:"name"`
@@ -190,6 +200,7 @@ func (a *AuthService) MessageRecall(token, msgId string) error {
 	}, nil)
 }
 
+// HistoryMessageInfo 历史消息记录项（单聊用 to_uid，群聊用 group_id）。
 type HistoryMessageInfo struct {
 	MsgId     string `json:"msg_id"`
 	FromUid   string `json:"from_uid"`
@@ -232,6 +243,7 @@ func (a *AuthService) GetFriends(token string) ([]FriendInfo, error) {
 	return out, nil
 }
 
+// FriendRequestInfo 好友申请记录项。
 type FriendRequestInfo struct {
 	Uid       string `json:"uid"`        // 申请人
 	FriendUid string `json:"friend_uid"` // 接收方（我）
@@ -301,6 +313,7 @@ func (a *AuthService) FriendRemark(token, friendUid, remark string) error {
 	}, nil)
 }
 
+// ConversationInfo 会话列表项（最近联系人及其最后一条消息）。
 type ConversationInfo struct {
 	Peer    string `json:"peer"`
 	Content string `json:"content"`
@@ -316,6 +329,7 @@ func (a *AuthService) GetConversations(token string) ([]ConversationInfo, error)
 	return out, nil
 }
 
+// GroupBrief 群组简要信息。
 type GroupBrief struct {
 	GroupId string `json:"group_id"`
 	Name    string `json:"name"`
@@ -357,6 +371,7 @@ func (a *AuthService) GroupInvite(token, groupId, friendUid string) error {
 	}, nil)
 }
 
+// GroupJoinRequestInfo 入群申请记录项。
 type GroupJoinRequestInfo struct {
 	Uid       string `json:"uid"`
 	GroupId   string `json:"group_id"`
@@ -389,6 +404,7 @@ func (a *AuthService) GroupReject(token, groupId, applicantUid string) error {
 	}, nil)
 }
 
+// GroupMemberInfo 群成员信息（role 标识群主/管理员/普通成员）。
 type GroupMemberInfo struct {
 	Uid       string `json:"uid"`
 	Role      int    `json:"role"`
@@ -406,6 +422,7 @@ func (a *AuthService) GroupMembers(token, groupId string) ([]GroupMemberInfo, er
 	return out, nil
 }
 
+// GroupInfoData 群资料详情（含群公告）。
 type GroupInfoData struct {
 	GroupId      string `json:"group_id"`
 	Name         string `json:"name"`
@@ -543,12 +560,14 @@ func (a *AuthService) GetAvatarByUid(token, uid string) (string, error) {
 	return "data:" + ct + ";base64," + out.Data, nil
 }
 
+// MomentCommentInfo 朋友圈动态的评论项。
 type MomentCommentInfo struct {
 	Uid       string `json:"uid"`
 	Content   string `json:"content"`
 	CreatedAt string `json:"created_at"`
 }
 
+// MomentInfo 朋友圈动态（含图片、点赞与评论列表）。
 type MomentInfo struct {
 	MomentId  string              `json:"moment_id"`
 	Uid       string              `json:"uid"`

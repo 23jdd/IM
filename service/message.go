@@ -22,6 +22,7 @@ var (
 	updateMongoMessageStatus = mongdb.UpdateMessageStatus
 )
 
+// recallWindow 消息可撤回的时间窗口（发送后 2 分钟内）。
 const recallWindow = 2 * time.Minute
 
 // 通过函数变量注入持久化与发布依赖，便于单元测试替换。
@@ -30,6 +31,7 @@ var (
 	publishChatEvent  = rabbitmq.PublishMessage
 )
 
+// SendChatMessage 持久化一条单聊消息（落 MySQL），并 best-effort 发布事件以异步归档。
 func SendChatMessage(ctx context.Context, fromUid, toUid string, msgType byte, content string) (*model.ChatMessage, error) {
 	msg := &model.ChatMessage{
 		MsgId:     strconv.FormatUint(utils.GenerateId(), 10),
@@ -93,10 +95,12 @@ func SendGroupMessage(ctx context.Context, fromUid, groupId string, msgType byte
 	return msg, nil
 }
 
+// GetOfflineMessages 拉取 uid 的离线消息（上线后补收）。
 func GetOfflineMessages(ctx context.Context, uid string) ([]*model.ChatMessage, error) {
 	return mysql.FindOfflineMessages(ctx, uid)
 }
 
+// MarkMessagesRead 将给定消息批量标记为已读。
 func MarkMessagesRead(ctx context.Context, msgIds []string) error {
 	return mysql.MarkMessagesRead(ctx, msgIds)
 }

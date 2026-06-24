@@ -2,12 +2,14 @@ package model
 
 import "time"
 
+// 好友关系状态常量
 const (
-	FriendStatusPending  byte = 0
-	FriendStatusAccepted byte = 1
-	FriendStatusBlocked  byte = 2
+	FriendStatusPending  byte = 0 // 待对方同意
+	FriendStatusAccepted byte = 1 // 已成为好友
+	FriendStatusBlocked  byte = 2 // 已拉黑
 )
 
+// FriendRelation 表示一条好友关系记录。
 type FriendRelation struct {
 	Id         uint64    `db:"id" json:"id"`
 	Uid        string    `db:"uid" json:"uid"`

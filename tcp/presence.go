@@ -25,10 +25,12 @@ type MemoryPresence struct {
 	m  map[string]string // uid -> instance
 }
 
+// NewMemoryPresence 创建一个内存在线表。
 func NewMemoryPresence() *MemoryPresence {
 	return &MemoryPresence{m: make(map[string]string)}
 }
 
+// SetOnline 登记 uid 当前所在实例。
 func (p *MemoryPresence) SetOnline(ctx context.Context, uid, instance string) error {
 	p.mu.Lock()
 	p.m[uid] = instance
@@ -36,12 +38,14 @@ func (p *MemoryPresence) SetOnline(ctx context.Context, uid, instance string) er
 	return nil
 }
 
+// GetInstance 查询 uid 所在实例，不在线返回空串。
 func (p *MemoryPresence) GetInstance(ctx context.Context, uid string) (string, error) {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
 	return p.m[uid], nil
 }
 
+// SetOffline 仅当登记实例与传入实例一致时才下线，避免误删别处新会话。
 func (p *MemoryPresence) SetOffline(ctx context.Context, uid, instance string) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()

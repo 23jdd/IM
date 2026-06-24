@@ -9,9 +9,11 @@ import (
 	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
+// assets 内嵌的前端静态资源（构建产物 frontend/dist）。
 //go:embed all:frontend/dist
 var assets embed.FS
 
+// main 解析命令行参数、初始化各服务并启动 Wails 桌面应用。
 func main() {
 	host := flag.String("host", "124.223.72.39", "目标服务器 IP / 主机名")
 	httpPort := flag.Int("http-port", 8080, "后端 HTTP 端口")

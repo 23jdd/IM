@@ -24,11 +24,13 @@ func SetJWTSecret(secret string) {
 	}
 }
 
+// Claims 自定义 JWT 载荷，包含用户 ID 和标准注册声明
 type Claims struct {
 	Uid string `json:"uid"`
 	jwt.RegisteredClaims
 }
 
+// GenerateToken 为指定用户生成 HS256 签名的 JWT，expiresAt 为过期时间
 func GenerateToken(uid string, expiresAt time.Time) (string, error) {
 	claims := &Claims{
 		Uid: uid,
@@ -41,6 +43,7 @@ func GenerateToken(uid string, expiresAt time.Time) (string, error) {
 	return token.SignedString(jwtSecret)
 }
 
+// ParseToken 解析并校验 JWT，返回其中的 Claims，校验失败时返回错误
 func ParseToken(tokenString string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (any, error) {
 		// 显式校验签名算法，防止 alg 混淆攻击（如 alg=none 或非 HMAC）。

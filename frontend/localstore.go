@@ -19,8 +19,10 @@ type LocalStore struct {
 	sessionDB *sql.DB // 登录态库（固定）
 }
 
+// NewLocalStore 创建本地存储实例（数据库延迟到首次使用时打开）。
 func NewLocalStore() *LocalStore { return &LocalStore{} }
 
+// LocalMessage 本地持久化的一条消息（self 标识是否为自己发送）。
 type LocalMessage struct {
 	MsgId   string `json:"msg_id"`
 	FromUid string `json:"from_uid"`
@@ -30,6 +32,7 @@ type LocalMessage struct {
 	Ts      int64  `json:"ts"`
 }
 
+// Session 本地保存的登录态。
 type Session struct {
 	Token   string `json:"token"`
 	Uid     string `json:"uid"`
@@ -56,6 +59,7 @@ func dataDir() (string, error) {
 
 // ---- 登录态（session.db）----
 
+// openSession 懒加载打开登录态库并建表（已打开则直接返回）。
 func (s *LocalStore) openSession() error {
 	if s.sessionDB != nil {
 		return nil
@@ -136,6 +140,7 @@ func (s *LocalStore) Init(selfUid string) error {
 	defer s.mu.Unlock()
 
 	if s.db != nil {
+		// 切换账号前先关闭上一账号的消息库
 		_ = s.db.Close()
 		s.db = nil
 	}

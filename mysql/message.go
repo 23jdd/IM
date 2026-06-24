@@ -9,8 +9,10 @@ import (
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
+// msgConn 消息库主连接，同时被好友、群组、用户等模块复用。
 var msgConn sqlx.SqlConn
 
+// InitMessageConn 初始化消息库数据库连接。
 func InitMessageConn(dataSource string) {
 	msgConn = sqlx.MustNewConn(sqlx.SqlConf{
 		DataSource: dataSource,
@@ -18,6 +20,7 @@ func InitMessageConn(dataSource string) {
 	})
 }
 
+// InsertChatMessage 插入一条聊天消息记录。
 func InsertChatMessage(ctx context.Context, msg *model.ChatMessage) error {
 	query := `INSERT INTO chat_message (msg_id, from_uid, to_uid, group_id, msg_type, content, status, created_at)
 	           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
@@ -28,6 +31,7 @@ func InsertChatMessage(ctx context.Context, msg *model.ChatMessage) error {
 	return err
 }
 
+// FindOfflineMessages 查询发给 uid 的离线消息（status=0 未读），最多 200 条按时间正序。
 func FindOfflineMessages(ctx context.Context, uid string) ([]*model.ChatMessage, error) {
 	query := `SELECT msg_id, from_uid, to_uid, group_id, msg_type, content, status, created_at
 	           FROM chat_message
@@ -41,12 +45,15 @@ func FindOfflineMessages(ctx context.Context, uid string) ([]*model.ChatMessage,
 	return msgs, nil
 }
 
+// MarkMessagesRead 将指定 msgIds 批量标记为已读（status=1）。
 func MarkMessagesRead(ctx context.Context, msgIds []string) error {
 	if len(msgIds) == 0 {
 		return nil
 	}
+	// 根据 id 数量动态拼接 IN 占位符（去掉末尾多余的逗号）
 	placeholders := strings.TrimSuffix(strings.Repeat("?,", len(msgIds)), ",")
 	query := fmt.Sprintf("UPDATE chat_message SET status = 1 WHERE msg_id IN (%s)", placeholders)
+	// 将 msgIds 转换为 any 切片以作为可变参数传入
 	args := make([]any, len(msgIds))
 	for i, id := range msgIds {
 		args[i] = id

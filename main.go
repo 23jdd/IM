@@ -20,6 +20,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// main 程序入口，负责加载配置、初始化各依赖组件并启动 TCP/HTTP/网关等服务
 func main() {
 	config := MustLoadConfig(".")
 
@@ -30,6 +31,7 @@ func main() {
 
 	log.Info("starting IM server")
 
+	// 初始化 MySQL 各业务连接（消息、好友、群组）
 	mysql.ConfigInit(config.DataSource)
 	mysql.InitMessageConn(config.DataSource)
 	mysql.InitFriendConn(config.DataSource)
@@ -41,6 +43,7 @@ func main() {
 	defer mongdb.CloseMongoDB()
 
 	redisOK := false
+	// Redis 初始化失败时仅告警并继续运行，后续会退化为单机内存模式
 	if err := redis.InitRedis(config.RedisAddr, config.RedisPassword, config.RedisDB); err != nil {
 		log.Warn("redis init failed", zap.Error(err))
 	} else {
@@ -52,6 +55,7 @@ func main() {
 		log.Warn("rabbitmq init failed", zap.Error(err))
 	} else {
 		defer rabbitmq.CloseRabbitMQ()
+		// 消费消息队列中的消息事件，并持久化到 MongoDB
 		rabbitmq.ConsumeMessages(func(event *rabbitmq.MessageEvent) error {
 			msg := &model.ChatMessage{
 				MsgId:     event.MsgId,
@@ -69,6 +73,7 @@ func main() {
 
 	server := tcp.NewServer(config.TCPAddr, config.TcpPort, 10*time.Second)
 	server.SetInstanceID(fmt.Sprintf("%s:%d", config.TCPAddr, config.TcpPort))
+	// 按顺序注册处理器：鉴权 -> 路由分发 -> 心跳回显
 	server.AddHandler(tcp.Verify)
 	server.AddHandler(tcp.Router)
 	server.AddHandler(tcp.Echo)
@@ -97,6 +102,7 @@ func main() {
 	}()
 
 	if len(config.BackendAddrs) > 0 {
+		// 配置了后端地址时启动 TCP 反向代理网关，对后端实例做负载均衡
 		lb := gateway.NewLoadBalancer(config.BackendAddrs)
 		go func() {
 			gateway.StartTCPProxy(

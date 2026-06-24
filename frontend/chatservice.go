@@ -28,10 +28,12 @@ type ChatService struct {
 	connected   bool
 }
 
+// NewChatService 创建聊天桥接服务实例。
 func NewChatService() *ChatService {
 	return &ChatService{}
 }
 
+// SetApp 注入 Wails 应用，用于向前端推送事件。
 func (s *ChatService) SetApp(app *application.App) {
 	s.app = app
 }
@@ -41,22 +43,26 @@ func (s *ChatService) SetDefaultAddr(addr string) {
 	s.defaultAddr = addr
 }
 
+// emit 向前端发送一个事件（app 未就绪时忽略）。
 func (s *ChatService) emit(name string, data any) {
 	if s.app != nil {
 		s.app.Event.Emit(name, data)
 	}
 }
 
+// nextKey 生成自增的消息 key，并截断到 3 字节（协议中 key 占 24 位）。
 func (s *ChatService) nextKey() uint32 {
 	return atomic.AddUint32(&s.key, 1) & 0xFFFFFF
 }
 
+// isConnected 返回当前是否处于已连接状态（读锁保护）。
 func (s *ChatService) isConnected() bool {
 	s.connectedMu.RLock()
 	defer s.connectedMu.RUnlock()
 	return s.connected
 }
 
+// setConnected 设置连接状态（写锁保护）。
 func (s *ChatService) setConnected(v bool) {
 	s.connectedMu.Lock()
 	s.connected = v
@@ -102,6 +108,7 @@ func (s *ChatService) Disconnect() {
 	s.setConnected(false)
 }
 
+// write 按二进制协议编码并发送一帧（未连接时返回错误）。
 func (s *ChatService) write(t byte, key uint32, data []byte) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -201,6 +208,7 @@ func (s *ChatService) SaveFile(suggestedName, dataBase64 string) (string, error)
 	return path, nil
 }
 
+// readLoop 在独立 goroutine 中循环读取后端帧并分发，连接断开后清理状态并通知前端。
 func (s *ChatService) readLoop(conn net.Conn) {
 	head := make([]byte, headSize)
 	for {
@@ -213,6 +221,7 @@ func (s *ChatService) readLoop(conn net.Conn) {
 		}
 		var body []byte
 		if bodyLen > 0 {
+			// 按帧头声明的长度精确读取消息体
 			body = make([]byte, bodyLen)
 			if _, err := io.ReadFull(conn, body); err != nil {
 				break
@@ -224,6 +233,7 @@ func (s *ChatService) readLoop(conn net.Conn) {
 	s.setConnected(false)
 	s.mu.Lock()
 	if s.conn == conn {
+		// 仅当未被新连接替换时才清空，避免误清新连接
 		s.conn = nil
 	}
 	s.mu.Unlock()
@@ -231,6 +241,7 @@ func (s *ChatService) readLoop(conn net.Conn) {
 	s.emit("im:status", "disconnected")
 }
 
+// dispatch 根据帧类型把后端消息转换为前端事件。
 func (s *ChatService) dispatch(t byte, key uint32, body []byte) {
 	switch t {
 	case msgACK:

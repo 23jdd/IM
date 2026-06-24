@@ -9,8 +9,10 @@ import (
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 )
 
+// conn 默认数据库连接，用于 go-zero 生成的 UserModel。
 var conn sqlx.SqlConn
 
+// ConfigInit 初始化默认数据库连接、自动建表并构建 UserModel。
 func ConfigInit(dataSource string) {
 	conn = sqlx.MustNewConn(sqlx.SqlConf{
 		DataSource: dataSource,
@@ -41,6 +43,7 @@ func createTables(c sqlx.SqlConn) {
 	}
 }
 
+// userDDL 用户表建表语句。
 const userDDL = `
 CREATE TABLE IF NOT EXISTS §user§ (
     §uid§           VARCHAR(32)      NOT NULL,
@@ -62,6 +65,7 @@ CREATE TABLE IF NOT EXISTS §user§ (
     KEY §idx_last_ip§ (§last_ip§)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
 
+// chatMessageDDL 聊天消息表建表语句。
 const chatMessageDDL = `
 CREATE TABLE IF NOT EXISTS §chat_message§ (
     §msg_id§     VARCHAR(20)  NOT NULL PRIMARY KEY,
@@ -78,6 +82,7 @@ CREATE TABLE IF NOT EXISTS §chat_message§ (
     INDEX §idx_created_at§ (§created_at§)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
 
+// friendDDL 好友关系表建表语句。
 const friendDDL = `
 CREATE TABLE IF NOT EXISTS §friend_relation§ (
     §id§          BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -92,6 +97,7 @@ CREATE TABLE IF NOT EXISTS §friend_relation§ (
     INDEX §idx_friend_uid§ (§friend_uid§)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
 
+// groupInfoDDL 群信息表建表语句。
 const groupInfoDDL = `
 CREATE TABLE IF NOT EXISTS §group_info§ (
     §group_id§     VARCHAR(20)   NOT NULL PRIMARY KEY,
@@ -107,6 +113,7 @@ CREATE TABLE IF NOT EXISTS §group_info§ (
     INDEX §idx_owner_uid§ (§owner_uid§)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
 
+// groupMemberDDL 群成员表建表语句。
 const groupMemberDDL = `
 CREATE TABLE IF NOT EXISTS §group_member§ (
     §id§         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -120,6 +127,7 @@ CREATE TABLE IF NOT EXISTS §group_member§ (
     INDEX §idx_uid§ (§uid§)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`
 
+// groupJoinRequestDDL 入群申请表建表语句。
 const groupJoinRequestDDL = `
 CREATE TABLE IF NOT EXISTS §group_join_request§ (
     §id§         BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,

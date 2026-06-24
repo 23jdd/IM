@@ -84,6 +84,7 @@ func IsBlocked(ctx context.Context, a, b string) (bool, error) {
 	return isBlockedBetween(ctx, a, b)
 }
 
+// RemoveFriend 删除 uid 与 friendUid 的好友关系（双向删除）。
 func RemoveFriend(ctx context.Context, uid, friendUid string) error {
 	if err := deleteFriendRel(ctx, uid, friendUid); err != nil {
 		return fmt.Errorf("remove friend: %w", err)
@@ -92,10 +93,12 @@ func RemoveFriend(ctx context.Context, uid, friendUid string) error {
 	return nil
 }
 
+// GetFriends 返回 uid 的好友关系列表（原始关系记录）。
 func GetFriends(ctx context.Context, uid string) ([]*model.FriendRelation, error) {
 	return mysql.FindFriends(ctx, uid)
 }
 
+// GetFriendRequests 返回发给 uid 的待处理好友申请列表。
 func GetFriendRequests(ctx context.Context, uid string) ([]*model.FriendRelation, error) {
 	return mysql.FindFriendRequests(ctx, uid)
 }

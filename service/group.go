@@ -29,6 +29,7 @@ var (
 	updateGroupAnnouncement = mysql.UpdateGroupAnnouncement
 )
 
+// CreateGroup 创建群：生成群信息并把创建者写入为群主成员。
 func CreateGroup(ctx context.Context, ownerUid, name, description string) (*model.GroupInfo, error) {
 	groupId := strconv.FormatUint(utils.GenerateId(), 10)
 	now := time.Now()
@@ -61,6 +62,7 @@ func CreateGroup(ctx context.Context, ownerUid, name, description string) (*mode
 	return g, nil
 }
 
+// JoinGroup 将 uid 以普通成员身份直接加入群。
 func JoinGroup(ctx context.Context, groupId, uid string) error {
 	member := &model.GroupMember{
 		GroupId:  groupId,
@@ -71,6 +73,7 @@ func JoinGroup(ctx context.Context, groupId, uid string) error {
 	return mysql.InsertGroupMember(ctx, member)
 }
 
+// LeaveGroup 退群：群主不可直接退群，退群后通知群主。
 func LeaveGroup(ctx context.Context, groupId, uid string) error {
 	g, err := findGroup(ctx, groupId)
 	if err != nil {
@@ -86,14 +89,17 @@ func LeaveGroup(ctx context.Context, groupId, uid string) error {
 	return nil
 }
 
+// GetGroup 按群号查询群信息。
 func GetGroup(ctx context.Context, groupId string) (*model.GroupInfo, error) {
 	return mysql.FindGroup(ctx, groupId)
 }
 
+// GetGroupMembers 返回某群的全部成员。
 func GetGroupMembers(ctx context.Context, groupId string) ([]*model.GroupMember, error) {
 	return mysql.FindGroupMembers(ctx, groupId)
 }
 
+// GetUserGroups 返回 uid 的群成员记录（其加入的所有群）。
 func GetUserGroups(ctx context.Context, uid string) ([]*model.GroupMember, error) {
 	return mysql.FindUserGroups(ctx, uid)
 }

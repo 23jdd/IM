@@ -8,28 +8,34 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Server HTTP 服务器，持有监听地址与端口。
 type Server struct {
-	address string
-	port    int
+	address string // 监听地址
+	port    int    // 监听端口
 }
 
+// NewServer 创建 HTTP 服务器实例。
 func NewServer(address string, port int) *Server {
 	return &Server{
 		address: address,
 		port:    port,
 	}
 }
+
+// Start 注册路由并启动 HTTP 服务，启动失败时 panic。
 func (s *Server) Start() {
 	router := gin.Default()
 
 	api := router.Group("/api")
 	{
+		// 无需鉴权的接口：注册与登录
 		user := api.Group("/user")
 		{
 			user.POST("/register", User.Register)
 			user.POST("/login", User.Login)
 		}
 
+		// 需要鉴权的接口，统一挂载 AuthMiddleware
 		auth := api.Group("", User.AuthMiddleware())
 		{
 			auth.GET("/user/profile", User.GetProfile)

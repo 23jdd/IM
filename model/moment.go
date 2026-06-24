@@ -2,6 +2,7 @@ package model
 
 import "time"
 
+// MomentComment 表示一条朋友圈评论。
 type MomentComment struct {
 	Uid       string    `bson:"uid" json:"uid"`
 	Content   string    `bson:"content" json:"content"`

@@ -2,6 +2,7 @@ package model
 
 import "time"
 
+// ChatMessage 表示一条聊天消息（单聊或群聊）。
 type ChatMessage struct {
 	MsgId     string    `db:"msg_id" json:"msg_id"`
 	FromUid   string    `db:"from_uid" json:"from_uid"`
@@ -13,8 +14,9 @@ type ChatMessage struct {
 	CreatedAt time.Time `db:"created_at" json:"created_at"`
 }
 
+// 消息状态常量
 const (
-	MsgStatusUnread  byte = 0
-	MsgStatusRead    byte = 1
-	MsgStatusRevoked byte = 2
+	MsgStatusUnread  byte = 0 // 未读
+	MsgStatusRead    byte = 1 // 已读
+	MsgStatusRevoked byte = 2 // 已撤回
 )

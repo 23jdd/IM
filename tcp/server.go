@@ -17,6 +17,7 @@ import (
 	"github.com/panjf2000/ants/v2"
 )
 
+// Server TCP 服务器：管理监听、连接表、协程池、处理链及跨实例路由组件。
 type Server struct {
 	address        string
 	port           int
@@ -35,6 +36,7 @@ type Server struct {
 	forwarder  Forwarder
 }
 
+// NewServer 创建服务器：初始化分级缓冲池、协程池与心跳周期。
 func NewServer(address string, port int, t time.Duration) *Server {
 	wp, err := ants.NewPool(ants.DefaultAntsPoolSize)
 	if err != nil {
@@ -50,6 +52,7 @@ func NewServer(address string, port int, t time.Duration) *Server {
 	}
 }
 
+// Start 监听并接受连接，每条连接交由协程池中的 worker 运行。
 func (s *Server) Start() {
 	listen, err := net.Listen("tcp", fmt.Sprintf("%s:%d", s.address, s.port))
 	if err != nil {
@@ -60,6 +63,7 @@ func (s *Server) Start() {
 	for {
 		con, err := listen.Accept()
 		if err != nil {
+			// 区分主动关停与偶发错误：关停则退出，否则继续接受。
 			select {
 			case <-s.quit:
 				return
@@ -73,6 +77,7 @@ func (s *Server) Start() {
 			NewClient(con, s).Start()
 		})
 		if err != nil {
+			// 提交失败：关闭连接并回滚计数。
 			log.Println("submit to worker pool failed:", err)
 			con.Close()
 			s.count.Add(-1)
@@ -80,10 +85,12 @@ func (s *Server) Start() {
 	}
 }
 
+// GetConnectCount 返回当前连接数。
 func (s *Server) GetConnectCount() int32 {
 	return s.count.Load()
 }
 
+// ShutDown 优雅关停：停止监听、关闭所有连接并释放协程池。
 func (s *Server) ShutDown() {
 	log.Println("server shutting down...")
 	close(s.quit)
@@ -113,10 +120,12 @@ func (s *Server) ShutDown() {
 	log.Println("server stopped")
 }
 
+// AddHandler 追加一个处理器到处理链尾部。
 func (s *Server) AddHandler(h Handler) {
 	s.clientHandlers = append(s.clientHandlers, h)
 }
 
+// RouteTo 将消息路由给目标 uid：优先本实例直投，否则查在线表跨实例转发。
 func (s *Server) RouteTo(uid string, m *Message.Message) error {
 	// 1) 目标在本实例：投递给其所有在线连接（多端在线）。
 	if locals := s.localClients(uid); len(locals) > 0 {
@@ -172,10 +181,12 @@ func (s *Server) SetPresence(p Presence) { s.presence = p }
 // SetForwarder 注入跨实例转发器。
 func (s *Server) SetForwarder(f Forwarder) { s.forwarder = f }
 
+// Register 将连接登记到指定 uid 的连接表。
 func (s *Server) Register(uid string, c *Client) {
 	s.addClient(uid, c)
 }
 
+// Lookup 返回该 uid 在本实例上的任一连接及是否存在。
 func (s *Server) Lookup(uid string) (*Client, bool) {
 	locals := s.localClients(uid)
 	if len(locals) == 0 {
@@ -242,6 +253,7 @@ func (s *Server) RouteToOthers(uid string, except *Client, m *Message.Message) {
 	}
 }
 
+// NotifyServer 阻塞等待 SIGINT/SIGTERM 信号，收到后触发优雅关停。
 func NotifyServer(s *Server) {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)

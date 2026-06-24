@@ -12,20 +12,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Response 统一的 HTTP 响应结构。
 type Response struct {
-	Code int    `json:"code"`
-	Msg  string `json:"msg"`
-	Data any    `json:"data,omitempty"`
+	Code int    `json:"code"` // 业务状态码，0 表示成功
+	Msg  string `json:"msg"`  // 提示信息
+	Data any    `json:"data,omitempty"` // 业务数据，可选
 }
 
+// ok 返回成功响应。
 func ok(c *gin.Context, data any) {
 	c.JSON(http.StatusOK, &Response{Code: 0, Msg: "ok", Data: data})
 }
 
+// fail 返回失败响应（HTTP 状态仍为 200，通过 code 区分业务错误）。
 func fail(c *gin.Context, code int, msg string) {
 	c.JSON(http.StatusOK, &Response{Code: code, Msg: msg})
 }
 
+// Register 用户注册。
 func Register(c *gin.Context) {
 	var req service.RegisterReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -41,6 +45,7 @@ func Register(c *gin.Context) {
 	ok(c, resp)
 }
 
+// Login 用户登录。
 func Login(c *gin.Context) {
 	var req service.LoginReq
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -56,6 +61,7 @@ func Login(c *gin.Context) {
 	ok(c, resp)
 }
 
+// GetProfile 获取当前登录用户的资料。
 func GetProfile(c *gin.Context) {
 	uid := c.GetString("uid")
 
@@ -67,6 +73,7 @@ func GetProfile(c *gin.Context) {
 	ok(c, resp)
 }
 
+// UpdateProfile 更新当前用户的资料。
 func UpdateProfile(c *gin.Context) {
 	uid := c.GetString("uid")
 
@@ -84,6 +91,7 @@ func UpdateProfile(c *gin.Context) {
 	ok(c, nil)
 }
 
+// ChangePassword 修改当前用户密码。
 func ChangePassword(c *gin.Context) {
 	uid := c.GetString("uid")
 
@@ -101,6 +109,7 @@ func ChangePassword(c *gin.Context) {
 	ok(c, nil)
 }
 
+// GetFriends 获取当前用户的好友列表。
 func GetFriends(c *gin.Context) {
 	uid := c.GetString("uid")
 
@@ -112,6 +121,7 @@ func GetFriends(c *gin.Context) {
 	ok(c, resp)
 }
 
+// GetConversations 获取当前用户的会话列表。
 func GetConversations(c *gin.Context) {
 	uid := c.GetString("uid")
 
@@ -123,6 +133,7 @@ func GetConversations(c *gin.Context) {
 	ok(c, resp)
 }
 
+// CreateGroup 创建群组。
 func CreateGroup(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -141,6 +152,7 @@ func CreateGroup(c *gin.Context) {
 	ok(c, gin.H{"group_id": g.GroupId, "name": g.Name})
 }
 
+// GetMyGroups 获取当前用户加入的群组列表。
 func GetMyGroups(c *gin.Context) {
 	uid := c.GetString("uid")
 	resp, err := service.GetUserGroupList(c.Request.Context(), uid)
@@ -151,6 +163,7 @@ func GetMyGroups(c *gin.Context) {
 	ok(c, resp)
 }
 
+// GetGroupMembers 获取指定群组的成员列表。
 func GetGroupMembers(c *gin.Context) {
 	groupId := c.Query("group_id")
 	if groupId == "" {
@@ -165,6 +178,7 @@ func GetGroupMembers(c *gin.Context) {
 	ok(c, resp)
 }
 
+// JoinGroup 申请加入群组。
 func JoinGroup(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -181,6 +195,7 @@ func JoinGroup(c *gin.Context) {
 	ok(c, nil)
 }
 
+// GroupJoinRequests 获取群组的入群申请列表（需管理员权限）。
 func GroupJoinRequests(c *gin.Context) {
 	uid := c.GetString("uid")
 	groupId := c.Query("group_id")
@@ -196,6 +211,7 @@ func GroupJoinRequests(c *gin.Context) {
 	ok(c, resp)
 }
 
+// ApproveJoin 通过入群申请。
 func ApproveJoin(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -213,6 +229,7 @@ func ApproveJoin(c *gin.Context) {
 	ok(c, nil)
 }
 
+// RejectJoin 拒绝入群申请。
 func RejectJoin(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -230,6 +247,7 @@ func RejectJoin(c *gin.Context) {
 	ok(c, nil)
 }
 
+// GetGroupInfo 获取群组详细信息。
 func GetGroupInfo(c *gin.Context) {
 	groupId := c.Query("group_id")
 	if groupId == "" {
@@ -251,6 +269,7 @@ func GetGroupInfo(c *gin.Context) {
 	})
 }
 
+// LeaveGroup 退出群组。
 func LeaveGroup(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -267,6 +286,7 @@ func LeaveGroup(c *gin.Context) {
 	ok(c, nil)
 }
 
+// DisbandGroup 解散群组（仅群主可操作）。
 func DisbandGroup(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -283,6 +303,7 @@ func DisbandGroup(c *gin.Context) {
 	ok(c, nil)
 }
 
+// KickGroupMember 将成员移出群组。
 func KickGroupMember(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -300,6 +321,7 @@ func KickGroupMember(c *gin.Context) {
 	ok(c, nil)
 }
 
+// TransferGroup 转让群主身份。
 func TransferGroup(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -317,6 +339,7 @@ func TransferGroup(c *gin.Context) {
 	ok(c, nil)
 }
 
+// MuteGroupMember 禁言群成员，minutes 为禁言时长（分钟）。
 func MuteGroupMember(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -335,6 +358,7 @@ func MuteGroupMember(c *gin.Context) {
 	ok(c, nil)
 }
 
+// SetGroupAnnouncement 设置群公告。
 func SetGroupAnnouncement(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -352,6 +376,7 @@ func SetGroupAnnouncement(c *gin.Context) {
 	ok(c, nil)
 }
 
+// UploadAvatar 上传头像（base64 编码），返回头像 ID。
 func UploadAvatar(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -379,6 +404,7 @@ func UploadAvatar(c *gin.Context) {
 	ok(c, gin.H{"avatar": id})
 }
 
+// GetAvatar 按头像 ID 获取头像数据（base64 返回）。
 func GetAvatar(c *gin.Context) {
 	id := c.Query("id")
 	if id == "" {
@@ -396,6 +422,7 @@ func GetAvatar(c *gin.Context) {
 	})
 }
 
+// GetAvatarByUid 按用户 ID 获取其头像数据（base64 返回）。
 func GetAvatarByUid(c *gin.Context) {
 	uid := c.Query("uid")
 	if uid == "" {
@@ -413,18 +440,19 @@ func GetAvatarByUid(c *gin.Context) {
 	})
 }
 
+// parseDataURL 解析 data URL，返回内容类型与去掉前缀后的 base64 数据；非 data URL 时按默认类型处理。
 func parseDataURL(s string) (contentType, data string) {
 	contentType = "image/jpeg"
 	idx := strings.Index(s, ",")
 	if idx < 0 {
-		return contentType, s
+		return contentType, s // 没有逗号分隔，视为纯数据
 	}
 	meta := s[:idx]
 	data = s[idx+1:]
 	if strings.HasPrefix(meta, "data:") {
 		meta = meta[len("data:"):]
 		if semi := strings.Index(meta, ";"); semi >= 0 {
-			meta = meta[:semi]
+			meta = meta[:semi] // 去掉 ;base64 等参数，仅保留 MIME 类型
 		}
 		if meta != "" {
 			contentType = meta
@@ -433,6 +461,7 @@ func parseDataURL(s string) (contentType, data string) {
 	return contentType, data
 }
 
+// PublishMoment 发布朋友圈动态，支持文字与多张图片。
 func PublishMoment(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -452,7 +481,7 @@ func PublishMoment(c *gin.Context) {
 		ct, raw := parseDataURL(dataURL)
 		data, err := base64.StdEncoding.DecodeString(raw)
 		if err != nil {
-			continue
+			continue // 单张图片解码失败则跳过，不影响整体发布
 		}
 		id, err := service.StoreImage(c.Request.Context(), data, ct)
 		if err == nil {
@@ -467,6 +496,7 @@ func PublishMoment(c *gin.Context) {
 	ok(c, m)
 }
 
+// GetTimeline 获取当前用户的朋友圈时间线。
 func GetTimeline(c *gin.Context) {
 	uid := c.GetString("uid")
 	resp, err := service.GetTimeline(c.Request.Context(), uid)
@@ -477,6 +507,7 @@ func GetTimeline(c *gin.Context) {
 	ok(c, resp)
 }
 
+// LikeMoment 点赞/取消点赞动态，返回当前是否已点赞。
 func LikeMoment(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -494,6 +525,7 @@ func LikeMoment(c *gin.Context) {
 	ok(c, gin.H{"liked": liked})
 }
 
+// CommentMoment 评论动态。
 func CommentMoment(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -512,6 +544,7 @@ func CommentMoment(c *gin.Context) {
 	ok(c, cm)
 }
 
+// DeleteMoment 删除自己的动态。
 func DeleteMoment(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -528,6 +561,7 @@ func DeleteMoment(c *gin.Context) {
 	ok(c, nil)
 }
 
+// AddFriend 发送好友请求。
 func AddFriend(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -545,6 +579,7 @@ func AddFriend(c *gin.Context) {
 	ok(c, nil)
 }
 
+// GetFriendRequests 获取收到的好友请求列表。
 func GetFriendRequests(c *gin.Context) {
 	uid := c.GetString("uid")
 	resp, err := service.GetFriendRequests(c.Request.Context(), uid)
@@ -555,6 +590,7 @@ func GetFriendRequests(c *gin.Context) {
 	ok(c, resp)
 }
 
+// AcceptFriend 接受好友请求。
 func AcceptFriend(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -571,6 +607,7 @@ func AcceptFriend(c *gin.Context) {
 	ok(c, nil)
 }
 
+// RemoveFriend 删除好友。
 func RemoveFriend(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -587,6 +624,7 @@ func RemoveFriend(c *gin.Context) {
 	ok(c, nil)
 }
 
+// BlockFriend 拉黑好友。
 func BlockFriend(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -603,6 +641,7 @@ func BlockFriend(c *gin.Context) {
 	ok(c, nil)
 }
 
+// UnblockFriend 取消拉黑好友。
 func UnblockFriend(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -619,6 +658,7 @@ func UnblockFriend(c *gin.Context) {
 	ok(c, nil)
 }
 
+// GetBlockedList 获取黑名单列表。
 func GetBlockedList(c *gin.Context) {
 	uid := c.GetString("uid")
 	resp, err := service.GetBlockedList(c.Request.Context(), uid)
@@ -629,6 +669,7 @@ func GetBlockedList(c *gin.Context) {
 	ok(c, resp)
 }
 
+// UpdateFriendRemark 修改好友备注。
 func UpdateFriendRemark(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -646,6 +687,7 @@ func UpdateFriendRemark(c *gin.Context) {
 	ok(c, nil)
 }
 
+// InviteToGroup 邀请好友加入群组。
 func InviteToGroup(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -663,6 +705,7 @@ func InviteToGroup(c *gin.Context) {
 	ok(c, nil)
 }
 
+// GetUserInfo 按 uid 获取用户简要信息。
 func GetUserInfo(c *gin.Context) {
 	uid := c.Query("uid")
 	if uid == "" {
@@ -677,6 +720,7 @@ func GetUserInfo(c *gin.Context) {
 	ok(c, u)
 }
 
+// UploadFile 上传文件（base64 编码），返回文件 ID。
 func UploadFile(c *gin.Context) {
 	var req struct {
 		DataBase64  string `json:"data_base64" binding:"required"`
@@ -703,6 +747,7 @@ func UploadFile(c *gin.Context) {
 	ok(c, gin.H{"file_id": id})
 }
 
+// RecallMessage 撤回消息。
 func RecallMessage(c *gin.Context) {
 	uid := c.GetString("uid")
 	var req struct {
@@ -747,6 +792,8 @@ func GetChatHistory(c *gin.Context) {
 	ok(c, msgs)
 }
 
+// AuthMiddleware 鉴权中间件：校验 Authorization 头中的 Bearer Token，
+// 解析成功后将用户 uid 写入上下文供后续处理使用。
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		auth := c.GetHeader("Authorization")
@@ -757,7 +804,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		parts := strings.SplitN(auth, " ", 2)
-		if len(parts) != 2 || parts[0] != "Bearer" {
+		if len(parts) != 2 || parts[0] != "Bearer" { // 必须为 "Bearer <token>" 格式
 			c.JSON(http.StatusUnauthorized, &Response{Code: -1, Msg: "invalid authorization format"})
 			c.Abort()
 			return
@@ -770,7 +817,7 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		c.Set("uid", claims.Uid)
+		c.Set("uid", claims.Uid) // 注入 uid，后续 handler 通过 c.GetString("uid") 读取
 		c.Next()
 	}
 }
