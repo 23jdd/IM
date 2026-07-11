@@ -30,18 +30,18 @@ const rtcConfig = {
 }
 
 const title = computed(() => {
-  if (phase.value === 'incoming') return 'Incoming video call'
-  if (phase.value === 'calling') return 'Calling'
-  if (phase.value === 'connected') return 'Video call'
-  return 'Connecting'
+  if (phase.value === 'incoming') return '视频通话邀请'
+  if (phase.value === 'calling') return '正在呼叫'
+  if (phase.value === 'connected') return '视频通话'
+  return '正在连接'
 })
 
 const statusText = computed(() => {
   const name = peerName.value || peerUid.value
-  if (phase.value === 'incoming') return `${name} is inviting you to a video call`
-  if (phase.value === 'calling') return `Waiting for ${name} to answer`
+  if (phase.value === 'incoming') return `${name} 邀请你视频通话`
+  if (phase.value === 'calling') return `等待 ${name} 接听`
   if (phase.value === 'connected') return name
-  return 'Establishing connection'
+  return '正在建立连接'
 })
 
 function makeCallId() {
@@ -63,7 +63,7 @@ async function attachStreams() {
 async function openMedia() {
   if (localStream.value) return
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    throw new Error('Camera or microphone is not available')
+    throw new Error('当前环境不支持摄像头/麦克风')
   }
   localStream.value = await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
   micEnabled.value = true
@@ -275,13 +275,13 @@ onBeforeUnmount(() => closeCall(true))
 
     <div class="call-controls">
       <template v-if="phase === 'incoming'">
-        <el-button type="danger" circle :icon="Close" title="Reject" @click="rejectCall" />
-        <el-button type="success" circle :icon="PhoneFilled" title="Accept" @click="acceptCall" />
+        <el-button type="danger" circle :icon="Close" title="拒绝" @click="rejectCall" />
+        <el-button type="success" circle :icon="PhoneFilled" title="接听" @click="acceptCall" />
       </template>
       <template v-else>
-        <el-button circle :icon="micEnabled ? Microphone : Mute" title="Microphone" @click="toggleMic" />
-        <el-button circle :icon="cameraEnabled ? VideoCamera : VideoPause" title="Camera" @click="toggleCamera" />
-        <el-button type="danger" circle :icon="Close" title="End" @click="closeCall(true)" />
+        <el-button circle :icon="micEnabled ? Microphone : Mute" title="麦克风" @click="toggleMic" />
+        <el-button circle :icon="cameraEnabled ? VideoCamera : VideoPause" title="摄像头" @click="toggleCamera" />
+        <el-button type="danger" circle :icon="Close" title="挂断" @click="closeCall(true)" />
       </template>
     </div>
   </el-dialog>

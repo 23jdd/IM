@@ -26,6 +26,29 @@ type TextChatPayload struct {
 	Mentions []string `json:"mentions"`
 }
 
+// RealtimeSignalRequest is the JSON control frame used for lightweight realtime events.
+type RealtimeSignalRequest struct {
+	Action     string          `json:"action"`
+	ToUid      string          `json:"to_uid"`
+	GroupId    string          `json:"group_id"`
+	UpTo       int64           `json:"up_to"`
+	SignalType string          `json:"signal_type"`
+	SDP        string          `json:"sdp"`
+	Candidate  json.RawMessage `json:"candidate"`
+	CallID     string          `json:"call_id"`
+}
+
+// VideoSignalPayload is forwarded to the callee through the existing Json channel.
+type VideoSignalPayload struct {
+	Event      string `json:"event"`
+	FromUid    string `json:"from_uid"`
+	ToUid      string `json:"to_uid"`
+	SignalType string `json:"signal_type"`
+	CallID     string `json:"call_id"`
+	SDP        string `json:"sdp,omitempty"`
+	Candidate  any    `json:"candidate,omitempty"`
+}
+
 // RealtimeTextPayload 是服务端路由给接收方的实时文本帧体，携带发送者信息，
 // 使接收端能正确归属消息（修复"实时帧丢失 from_uid"问题）。群聊时带 group_id。
 type RealtimeTextPayload struct {
@@ -195,16 +218,7 @@ func OfflineSyncHandler(m *Message.Message, c *Client) {
 
 	// Json 帧分流：带 action 的为实时信号（typing/read），即发即弃，不落库、不归档。
 	if len(m.Data) > 0 {
-		var req struct {
-			Action     string          `json:"action"`
-			ToUid      string          `json:"to_uid"`
-			GroupId    string          `json:"group_id"`
-			UpTo       int64           `json:"up_to"`
-			SignalType string          `json:"signal_type"`
-			SDP        string          `json:"sdp"`
-			Candidate  json.RawMessage `json:"candidate"`
-			CallID     string          `json:"call_id"`
-		}
+		var req RealtimeSignalRequest
 		if json.Unmarshal(m.Data, &req) == nil {
 			switch req.Action {
 			case "typing":
@@ -297,20 +311,20 @@ func handleVideoSignal(c *Client, toUid, signalType, sdp string, candidate json.
 	if toUid == "" || signalType == "" {
 		return
 	}
-	payload := map[string]any{
-		"event":       "video_signal",
-		"from_uid":    c.UID(),
-		"to_uid":      toUid,
-		"signal_type": signalType,
-		"call_id":     callID,
+	payload := VideoSignalPayload{
+		Event:      "video_signal",
+		FromUid:    c.UID(),
+		ToUid:      toUid,
+		SignalType: signalType,
+		CallID:     callID,
 	}
 	if sdp != "" {
-		payload["sdp"] = sdp
+		payload.SDP = sdp
 	}
 	if len(candidate) > 0 && string(candidate) != "null" {
 		var v any
 		if err := json.Unmarshal(candidate, &v); err == nil {
-			payload["candidate"] = v
+			payload.Candidate = v
 		}
 	}
 	data, _ := json.Marshal(payload)
