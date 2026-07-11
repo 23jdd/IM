@@ -407,6 +407,33 @@ export const useChatStore = defineStore('chat', {
       this._touch(peer, m.content || '', time, !self)
     },
 
+
+    async searchMessages(uid, keyword, limit = 50) {
+      if (!uid || !keyword) return []
+      const rows = await api.localSearch(uid, keyword, limit)
+      return (rows || []).map((r) => ({
+        id: r.msg_id || nextId(),
+        msgId: r.msg_id || '',
+        fromUid: r.from_uid,
+        content: r.content,
+        time: r.ts,
+        self: r.self,
+        status: r.status || (r.self ? 'sent' : 'recv'),
+        recalled: r.status === 'recalled',
+      }))
+    },
+
+    async clearLocalMessages(uid) {
+      if (!uid) return
+      await api.localClear(uid)
+      this.messages[uid] = []
+      const conv = this.conversations.find((c) => c.uid === uid)
+      if (conv) {
+        conv.last = ''
+        conv.time = 0
+        conv.unread = 0
+      }
+    },
     removeConversation(uid) {
       this.conversations = this.conversations.filter((c) => c.uid !== uid)
       delete this.messages[uid]

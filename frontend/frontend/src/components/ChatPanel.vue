@@ -10,6 +10,8 @@ import {
   Document,
   Download,
   VideoCamera,
+  Search,
+  MoreFilled,
 } from '@element-plus/icons-vue'
 import { useChatStore } from '../store/chat'
 import { useUserStore } from '../store/user'
@@ -651,6 +653,22 @@ function onKeydown(e) {
         </span>
         <div class="header-actions">
           <el-button
+            link
+            class="search-btn"
+            :icon="Search"
+            title="搜索聊天记录"
+            @click="openSearch"
+          />
+          <el-dropdown trigger="click" @command="handleMoreCommand">
+            <el-button link class="more-btn" :icon="MoreFilled" title="更多" />
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="export">导出聊天记录</el-dropdown-item>
+                <el-dropdown-item command="clear" divided>清空本地记录</el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+          <el-button
             v-if="!conv.isGroup"
             link
             class="video-btn"
@@ -728,7 +746,7 @@ function onKeydown(e) {
                   <el-icon class="fc-dl"><Download /></el-icon>
                 </div>
               </template>
-              <div v-else class="bubble" :class="{ self: m.self }">{{ m.content }}</div>
+              <div v-else class="bubble" :class="{ self: m.self }" title="双击复制" @dblclick.stop="copyMessage(m)">{{ m.content }}</div>
               <el-button
                 v-if="canRecall(m)"
                 class="recall-btn"
@@ -813,6 +831,37 @@ function onKeydown(e) {
         </div>
       </div>
 
+      <el-dialog v-model="searchVisible" title="搜索聊天记录" width="420px" align-center>
+        <div class="search-dialog">
+          <el-input
+            v-model="searchKeyword"
+            placeholder="输入关键词"
+            clearable
+            @keyup.enter="runSearch"
+          >
+            <template #append>
+              <el-button :icon="Search" :loading="searchLoading" @click="runSearch" />
+            </template>
+          </el-input>
+          <div class="search-results">
+            <div
+              v-for="m in searchResults"
+              :key="m.id || m.msgId"
+              class="search-result"
+              @click="jumpToSearchResult(m)"
+            >
+              <div class="sr-line">
+                <span class="sr-sender">{{ exportSenderName(m) }}</span>
+                <span class="sr-time">{{ formatTime(m.time) }}</span>
+              </div>
+              <div class="sr-content">{{ plainMessageContent(m.content) }}</div>
+            </div>
+            <div v-if="searchKeyword && !searchLoading && !searchResults.length" class="search-empty">
+              没有找到相关消息
+            </div>
+          </div>
+        </div>
+      </el-dialog>
       <el-dialog v-model="membersVisible" title="群成员" width="360px" align-center>
         <div class="ann-box">
           <div class="ann-head">

@@ -241,3 +241,52 @@ func (s *LocalStore) LoadMessages(peer string, limit int) ([]LocalMessage, error
 	}
 	return out, rows.Err()
 }
+
+// SearchMessages searches local messages in one conversation by keyword, newest first.
+func (s *LocalStore) SearchMessages(peer, keyword string, limit int) ([]LocalMessage, error) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.db == nil {
+		return nil, errors.New("local store not initialized")
+	}
+	if peer == "" || keyword == "" {
+		return []LocalMessage{}, nil
+	}
+	if limit <= 0 || limit > 200 {
+		limit = 50
+	}
+	rows, err := s.db.Query(
+		`SELECT msg_id, from_uid, content, self, status, ts FROM messages WHERE peer = ? AND content LIKE ? ORDER BY ts DESC LIMIT ?`,
+		peer, "%"+keyword+"%", limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	out := make([]LocalMessage, 0)
+	for rows.Next() {
+		var m LocalMessage
+		var selfInt int
+		if err := rows.Scan(&m.MsgId, &m.FromUid, &m.Content, &selfInt, &m.Status, &m.Ts); err != nil {
+			return nil, err
+		}
+		m.Self = selfInt == 1
+		out = append(out, m)
+	}
+	return out, rows.Err()
+}
+
+// ClearMessages removes local cached messages for one conversation only.
+func (s *LocalStore) ClearMessages(peer string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.db == nil {
+		return errors.New("local store not initialized")
+	}
+	if peer == "" {
+		return nil
+	}
+	_, err := s.db.Exec(`DELETE FROM messages WHERE peer = ?`, peer)
+	return err
+}

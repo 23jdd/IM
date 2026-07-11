@@ -18,6 +18,14 @@ import { Call as $Call, CancellablePromise as $CancellablePromise, Create as $Cr
 import * as $models from "./models.js";
 
 /**
+ * ClearMessages removes local cached messages for one conversation only.
+ * @param {string} peer
+ * @returns {$CancellablePromise<void>}
+ */
+export function ClearMessages(peer) {
+    return $Call.ByID(3727948057, peer);
+}
+/**
  * ClearSession 登出时清除登录态。
  * @returns {$CancellablePromise<void>}
  */
@@ -92,6 +100,19 @@ export function SaveSession(token, uid, name, profile) {
     return $Call.ByID(470146979, token, uid, name, profile);
 }
 
+
+/**
+ * SearchMessages searches local messages in one conversation by keyword, newest first.
+ * @param {string} peer
+ * @param {string} keyword
+ * @param {number} limit
+ * @returns {$CancellablePromise<$models.LocalMessage[]>}
+ */
+export function SearchMessages(peer, keyword, limit) {
+    return $Call.ByID(3405892884, peer, keyword, limit).then(/** @type {($result: any) => any} */(($result) => {
+        return $$createType1($result);
+    }));
+}
 // Private type creation functions
 const $$createType0 = $models.LocalMessage.createFrom;
 const $$createType1 = $Create.Array($$createType0);

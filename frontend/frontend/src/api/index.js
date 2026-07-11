@@ -89,6 +89,8 @@ export const api = {
   localSave: (peer, msgId, fromUid, content, self, status, ts) =>
     LocalStore.SaveMessage(peer, msgId, fromUid, content, self, status, ts),
   localLoad: (peer, limit) => LocalStore.LoadMessages(peer, limit),
+  localSearch: (peer, keyword, limit) => LocalStore.SearchMessages(peer, keyword, limit),
+  localClear: (peer) => LocalStore.ClearMessages(peer),
   localRecall: (msgId) => LocalStore.MarkRecalled(msgId),
   saveSession: (token, uid, name, profile) =>
     LocalStore.SaveSession(token, uid, name, profile),
