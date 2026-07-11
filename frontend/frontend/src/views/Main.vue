@@ -9,6 +9,7 @@ import ChatPanel from '../components/ChatPanel.vue'
 import ProfileDialog from '../components/ProfileDialog.vue'
 import Moments from '../components/Moments.vue'
 import UserCard from '../components/UserCard.vue'
+import VideoCall from '../components/VideoCall.vue'
 import { api, onEvent, EVT } from '../api'
 import { useUserStore } from '../store/user'
 import { useChatStore } from '../store/chat'
@@ -141,6 +142,8 @@ async function handleNotify(d) {
     chat.markReadByPeer(d.from_uid, d.up_to)
   } else if (d.event === 'group_read') {
     chat.markGroupRead(d.group_id, d.from_uid, d.up_to)
+  } else if (d.event === 'video_signal') {
+    chat.pushVideoSignal(d)
   } else if (d.event === 'blocked') {
     ElMessage.warning('消息发送失败：你已被对方拉黑或已拉黑对方')
   }
@@ -277,6 +280,7 @@ onUnmounted(() => {
     <Moments v-if="activeView === 'moments'" class="main-col" />
 
     <ProfileDialog v-model="profileVisible" />
+    <VideoCall />
     <UserCard
       :model-value="chat.userCardVisible"
       :uid="chat.userCardUid"

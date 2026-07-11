@@ -196,10 +196,14 @@ func OfflineSyncHandler(m *Message.Message, c *Client) {
 	// Json 帧分流：带 action 的为实时信号（typing/read），即发即弃，不落库、不归档。
 	if len(m.Data) > 0 {
 		var req struct {
-			Action  string `json:"action"`
-			ToUid   string `json:"to_uid"`
-			GroupId string `json:"group_id"`
-			UpTo    int64  `json:"up_to"`
+			Action     string          `json:"action"`
+			ToUid      string          `json:"to_uid"`
+			GroupId    string          `json:"group_id"`
+			UpTo       int64           `json:"up_to"`
+			SignalType string          `json:"signal_type"`
+			SDP        string          `json:"sdp"`
+			Candidate  json.RawMessage `json:"candidate"`
+			CallID     string          `json:"call_id"`
 		}
 		if json.Unmarshal(m.Data, &req) == nil {
 			switch req.Action {
@@ -208,6 +212,9 @@ func OfflineSyncHandler(m *Message.Message, c *Client) {
 				return
 			case "read":
 				handleRead(c, req.ToUid, req.GroupId, req.UpTo)
+				return
+			case "video_signal":
+				handleVideoSignal(c, req.ToUid, req.SignalType, req.SDP, req.Candidate, req.CallID)
 				return
 			}
 		}
@@ -282,6 +289,32 @@ func handleRead(c *Client, toUid, groupId string, upTo int64) {
 	}
 	payload, _ := json.Marshal(map[string]any{"event": "read", "from_uid": c.UID(), "up_to": upTo})
 	_ = c.server.RouteTo(toUid, Message.NewMessage(Message.Json, 0, payload))
+}
+
+// handleVideoSignal forwards WebRTC signaling between single-chat peers.
+// Media flows peer-to-peer; the IM server only relays offer/answer/ICE metadata.
+func handleVideoSignal(c *Client, toUid, signalType, sdp string, candidate json.RawMessage, callID string) {
+	if toUid == "" || signalType == "" {
+		return
+	}
+	payload := map[string]any{
+		"event":       "video_signal",
+		"from_uid":    c.UID(),
+		"to_uid":      toUid,
+		"signal_type": signalType,
+		"call_id":     callID,
+	}
+	if sdp != "" {
+		payload["sdp"] = sdp
+	}
+	if len(candidate) > 0 && string(candidate) != "null" {
+		var v any
+		if err := json.Unmarshal(candidate, &v); err == nil {
+			payload["candidate"] = v
+		}
+	}
+	data, _ := json.Marshal(payload)
+	_ = c.server.RouteTo(toUid, Message.NewMessage(Message.Json, 0, data))
 }
 
 // AckHandler 处理客户端对离线消息的确认：收到 ACK(key) 后才将对应消息标记已读。

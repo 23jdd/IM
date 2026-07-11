@@ -97,6 +97,19 @@ export function SendTyping(toUid, groupId) {
     return $Call.ByID(2225526646, toUid, groupId);
 }
 
+
+/**
+ * SendVideoSignal forwards WebRTC signaling metadata over the existing Json channel.
+ * @param {string} toUid
+ * @param {string} signalType
+ * @param {string} sdp
+ * @param {string} candidateJSON
+ * @param {string} callID
+ * @returns {$CancellablePromise<void>}
+ */
+export function SendVideoSignal(toUid, signalType, sdp, candidateJSON, callID) {
+    return $Call.ByID(1375600936, toUid, signalType, sdp, candidateJSON, callID);
+}
 /**
  * @param {application$0.App | null} app
  * @returns {$CancellablePromise<void>}

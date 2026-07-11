@@ -79,6 +79,8 @@ export const api = {
   sendTyping: (toUid, groupId) => ChatService.SendTyping(toUid, groupId),
   sendRead: (toUid, groupId, upTo) =>
     ChatService.SendRead(toUid, groupId, upTo),
+  sendVideoSignal: (toUid, signalType, sdp, candidateJSON, callId) =>
+    ChatService.SendVideoSignal(toUid, signalType, sdp || '', candidateJSON || '', callId || ''),
   sync: () => ChatService.Sync(),
   disconnect: () => ChatService.Disconnect(),
 

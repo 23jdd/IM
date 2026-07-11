@@ -36,6 +36,10 @@ export const useChatStore = defineStore('chat', {
     typing: {}, // uid -> 过期时间戳(ms)，用于“正在输入”提示
     userCardVisible: false, // 用户信息卡片
     userCardUid: '',
+    videoCallRequestSeq: 0,
+    videoCallRequest: null,
+    videoSignalSeq: 0,
+    lastVideoSignal: null,
   }),
 
   getters: {
@@ -115,6 +119,18 @@ export const useChatStore = defineStore('chat', {
       if (!uid) return
       this.userCardUid = uid
       this.userCardVisible = true
+    },
+
+    requestVideoCall(peerUid, peerName) {
+      if (!peerUid) return
+      this.videoCallRequestSeq += 1
+      this.videoCallRequest = { peerUid, peerName: peerName || peerUid }
+    },
+
+    pushVideoSignal(signal) {
+      if (!signal || !signal.from_uid) return
+      this.videoSignalSeq += 1
+      this.lastVideoSignal = { ...signal }
     },
 
     setFriends(list) {

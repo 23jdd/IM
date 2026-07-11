@@ -9,6 +9,7 @@ import {
   Picture,
   Document,
   Download,
+  VideoCamera,
 } from '@element-plus/icons-vue'
 import { useChatStore } from '../store/chat'
 import { useUserStore } from '../store/user'
@@ -615,6 +616,16 @@ async function send() {
   }
 }
 
+
+function startVideoCall() {
+  const c = conv.value
+  if (!c || c.isGroup) return
+  if (!chat.connected) {
+    ElMessage.warning('未连接到服务器')
+    return
+  }
+  chat.requestVideoCall(c.uid, c.name)
+}
 function onKeydown(e) {
   if (e.key === 'Enter' && !e.shiftKey) {
     e.preventDefault()
@@ -638,15 +649,25 @@ function onKeydown(e) {
             {{ conv.isGroup ? '有人正在输入…' : '对方正在输入…' }}
           </span>
         </span>
-        <el-button
-          v-if="conv.isGroup"
-          link
-          class="members-btn"
-          :loading="loadingMembers"
-          @click="showMembers"
-        >
-          成员
-        </el-button>
+        <div class="header-actions">
+          <el-button
+            v-if="!conv.isGroup"
+            link
+            class="video-btn"
+            :icon="VideoCamera"
+            title="视频通话"
+            @click="startVideoCall"
+          />
+          <el-button
+            v-if="conv.isGroup"
+            link
+            class="members-btn"
+            :loading="loadingMembers"
+            @click="showMembers"
+          >
+            成员
+          </el-button>
+        </div>
       </div>
 
       <div ref="scroller" class="messages selectable" @scroll="onMessagesScroll">
@@ -1110,8 +1131,18 @@ function onKeydown(e) {
   margin-right: 6px;
   vertical-align: middle;
 }
-.members-btn {
+.header-actions {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.video-btn {
+  color: var(--wx-text-sub);
+  font-size: 18px;
+}
+.members-btn {
+  margin-left: 0;
 }
 .member-row {
   display: flex;
