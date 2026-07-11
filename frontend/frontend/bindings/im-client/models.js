@@ -6,6 +6,9 @@
 // @ts-ignore: Unused imports
 import { Create as $Create } from "@wailsio/runtime";
 
+/**
+ * ConversationInfo 会话列表项（最近联系人及其最后一条消息）。
+ */
 export class ConversationInfo {
     /**
      * Creates a new ConversationInfo instance.
@@ -48,6 +51,9 @@ export class ConversationInfo {
     }
 }
 
+/**
+ * FriendInfo 好友列表项（含本地备注与对方昵称、头像）。
+ */
 export class FriendInfo {
     /**
      * Creates a new FriendInfo instance.
@@ -97,6 +103,9 @@ export class FriendInfo {
     }
 }
 
+/**
+ * FriendRequestInfo 好友申请记录项。
+ */
 export class FriendRequestInfo {
     /**
      * Creates a new FriendRequestInfo instance.
@@ -148,6 +157,9 @@ export class FriendRequestInfo {
     }
 }
 
+/**
+ * GroupBrief 群组简要信息。
+ */
 export class GroupBrief {
     /**
      * Creates a new GroupBrief instance.
@@ -183,6 +195,9 @@ export class GroupBrief {
     }
 }
 
+/**
+ * GroupInfoData 群资料详情（含群公告）。
+ */
 export class GroupInfoData {
     /**
      * Creates a new GroupInfoData instance.
@@ -246,6 +261,9 @@ export class GroupInfoData {
     }
 }
 
+/**
+ * GroupJoinRequestInfo 入群申请记录项。
+ */
 export class GroupJoinRequestInfo {
     /**
      * Creates a new GroupJoinRequestInfo instance.
@@ -295,6 +313,9 @@ export class GroupJoinRequestInfo {
     }
 }
 
+/**
+ * GroupMemberInfo 群成员信息（role 标识群主/管理员/普通成员）。
+ */
 export class GroupMemberInfo {
     /**
      * Creates a new GroupMemberInfo instance.
@@ -344,6 +365,9 @@ export class GroupMemberInfo {
     }
 }
 
+/**
+ * HistoryMessageInfo 历史消息记录项（单聊用 to_uid，群聊用 group_id）。
+ */
 export class HistoryMessageInfo {
     /**
      * Creates a new HistoryMessageInfo instance.
@@ -421,6 +445,9 @@ export class HistoryMessageInfo {
     }
 }
 
+/**
+ * LocalMessage 本地持久化的一条消息（self 标识是否为自己发送）。
+ */
 export class LocalMessage {
     /**
      * Creates a new LocalMessage instance.
@@ -484,6 +511,9 @@ export class LocalMessage {
     }
 }
 
+/**
+ * LoginResult 登录结果，包含 JWT token 及基本身份信息。
+ */
 export class LoginResult {
     /**
      * Creates a new LoginResult instance.
@@ -526,6 +556,9 @@ export class LoginResult {
     }
 }
 
+/**
+ * MomentCommentInfo 朋友圈动态的评论项。
+ */
 export class MomentCommentInfo {
     /**
      * Creates a new MomentCommentInfo instance.
@@ -568,6 +601,9 @@ export class MomentCommentInfo {
     }
 }
 
+/**
+ * MomentInfo 朋友圈动态（含图片、点赞与评论列表）。
+ */
 export class MomentInfo {
     /**
      * Creates a new MomentInfo instance.
@@ -650,6 +686,9 @@ export class MomentInfo {
     }
 }
 
+/**
+ * Profile 用户完整资料。
+ */
 export class Profile {
     /**
      * Creates a new Profile instance.
@@ -734,6 +773,9 @@ export class Profile {
     }
 }
 
+/**
+ * RegisterResult 注册结果，包含后端分配的用户 uid。
+ */
 export class RegisterResult {
     /**
      * Creates a new RegisterResult instance.
@@ -762,6 +804,9 @@ export class RegisterResult {
     }
 }
 
+/**
+ * Session 本地保存的登录态。
+ */
 export class Session {
     /**
      * Creates a new Session instance.
@@ -812,6 +857,9 @@ export class Session {
     }
 }
 
+/**
+ * UserBriefInfo 用户公开简要信息（搜索添加好友时的预览）。
+ */
 export class UserBriefInfo {
     /**
      * Creates a new UserBriefInfo instance.

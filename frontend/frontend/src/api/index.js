@@ -91,6 +91,8 @@ export const api = {
   localLoad: (peer, limit) => LocalStore.LoadMessages(peer, limit),
   localSearch: (peer, keyword, limit) => LocalStore.SearchMessages(peer, keyword, limit),
   localClear: (peer) => LocalStore.ClearMessages(peer),
+  localRekey: (peer, oldMsgId, newMsgId, status) =>
+    LocalStore.RekeyMessage(peer, oldMsgId, newMsgId, status),
   localRecall: (msgId) => LocalStore.MarkRecalled(msgId),
   saveSession: (token, uid, name, profile) =>
     LocalStore.SaveSession(token, uid, name, profile),

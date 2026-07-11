@@ -66,6 +66,60 @@ func TestLocalStoreClearMessagesOnlyPeer(t *testing.T) {
 		t.Fatalf("expected peer-b to stay, got %#v", kept)
 	}
 }
+
+func TestLocalStoreSaveMessageUpdatesExistingMsgID(t *testing.T) {
+	t.Setenv("IM_DATA_DIR", t.TempDir())
+
+	store := NewLocalStore()
+	defer closeTestLocalStore(store)
+	if err := store.Init("u1"); err != nil {
+		t.Fatalf("init local store: %v", err)
+	}
+	if err := store.SaveMessage("peer", "m1", "u2", "old", false, "recv", 1000); err != nil {
+		t.Fatalf("save first m1: %v", err)
+	}
+	if err := store.SaveMessage("peer", "m1", "u2", "new", false, "read", 2000); err != nil {
+		t.Fatalf("save duplicate m1: %v", err)
+	}
+
+	got, err := store.LoadMessages("peer", 10)
+	if err != nil {
+		t.Fatalf("load messages: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("expected 1 message after duplicate save, got %d: %#v", len(got), got)
+	}
+	if got[0].Content != "new" || got[0].Status != "read" || got[0].Ts != 2000 {
+		t.Fatalf("expected updated row, got %#v", got[0])
+	}
+}
+
+func TestLocalStoreRekeyMessage(t *testing.T) {
+	t.Setenv("IM_DATA_DIR", t.TempDir())
+
+	store := NewLocalStore()
+	defer closeTestLocalStore(store)
+	if err := store.Init("u1"); err != nil {
+		t.Fatalf("init local store: %v", err)
+	}
+	if err := store.SaveMessage("peer", "tmp-1", "u1", "hello", true, "sending", 1000); err != nil {
+		t.Fatalf("save temp message: %v", err)
+	}
+	if err := store.RekeyMessage("peer", "tmp-1", "m1", "sent"); err != nil {
+		t.Fatalf("rekey message: %v", err)
+	}
+
+	got, err := store.LoadMessages("peer", 10)
+	if err != nil {
+		t.Fatalf("load messages: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("expected 1 message after rekey, got %d: %#v", len(got), got)
+	}
+	if got[0].MsgId != "m1" || got[0].Status != "sent" {
+		t.Fatalf("expected msg_id m1 with sent status, got %#v", got[0])
+	}
+}
 func closeTestLocalStore(store *LocalStore) {
 	if store.db != nil {
 		_ = store.db.Close()

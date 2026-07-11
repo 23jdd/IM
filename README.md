@@ -1,5 +1,4 @@
 # ChatIM
-
 ![Go](https://img.shields.io/badge/Go-1.25%2B-00ADD8?logo=go&logoColor=white)
 ![Gin](https://img.shields.io/badge/Gin-1.12-00ADD8?logo=go&logoColor=white)
 ![Wails](https://img.shields.io/badge/Wails-v3_alpha-DF0000?logo=wails&logoColor=white)

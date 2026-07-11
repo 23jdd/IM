@@ -97,7 +97,6 @@ export function SendTyping(toUid, groupId) {
     return $Call.ByID(2225526646, toUid, groupId);
 }
 
-
 /**
  * SendVideoSignal forwards WebRTC signaling metadata over the existing Json channel.
  * @param {string} toUid
@@ -110,7 +109,9 @@ export function SendTyping(toUid, groupId) {
 export function SendVideoSignal(toUid, signalType, sdp, candidateJSON, callID) {
     return $Call.ByID(1375600936, toUid, signalType, sdp, candidateJSON, callID);
 }
+
 /**
+ * SetApp 注入 Wails 应用，用于向前端推送事件。
  * @param {application$0.App | null} app
  * @returns {$CancellablePromise<void>}
  */

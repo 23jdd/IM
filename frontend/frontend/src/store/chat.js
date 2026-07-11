@@ -16,6 +16,19 @@ function preview(content) {
   return content
 }
 
+function normalizeId(v) {
+  return v === undefined || v === null ? '' : String(v)
+}
+
+function mergeMessage(target, source) {
+  if (!target || !source) return
+  if (source.msgId) target.msgId = source.msgId
+  if (source.fromUid) target.fromUid = source.fromUid
+  if (source.content) target.content = source.content
+  if (source.time && (!target.time || source.time < target.time)) target.time = source.time
+  if (source.status && target.status !== 'read') target.status = source.status
+  if (source.recalled) target.recalled = true
+}
 function parseTime(t) {
   if (!t) return Date.now()
   const ms = new Date(t).getTime()
@@ -201,6 +214,30 @@ export const useChatStore = defineStore('chat', {
       }
     },
 
+    _findDuplicateIndex(uid, msg) {
+      const arr = this.messages[uid] || []
+      const msgId = normalizeId(msg && msg.msgId)
+      const id = normalizeId(msg && msg.id)
+      if (msgId) {
+        const idx = arr.findIndex((m) => normalizeId(m.msgId) === msgId || normalizeId(m.id) === msgId)
+        if (idx >= 0) return idx
+      }
+      if (id && !id.includes('_')) {
+        const idx = arr.findIndex((m) => normalizeId(m.msgId) === id || normalizeId(m.id) === id)
+        if (idx >= 0) return idx
+      }
+      if (msg && msg.self && msg.content) {
+        const msgTime = msg.time || 0
+        return arr.findIndex(
+          (m) =>
+            m.self &&
+            !m.msgId &&
+            m.content === msg.content &&
+            (!msgTime || !m.time || Math.abs(m.time - msgTime) < 2 * 60 * 1000)
+        )
+      }
+      return -1
+    },
     _touch(uid, content, time, incrUnread) {
       const conv = this.conversations.find((c) => c.uid === uid)
       if (!conv) return
@@ -213,8 +250,15 @@ export const useChatStore = defineStore('chat', {
 
     _push(uid, msg) {
       if (!this.messages[uid]) this.messages[uid] = []
+      const dupIndex = this._findDuplicateIndex(uid, msg)
+      if (dupIndex >= 0) {
+        mergeMessage(this.messages[uid][dupIndex], msg)
+        this._persist(uid, this.messages[uid][dupIndex])
+        return false
+      }
       this.messages[uid].push(msg)
       this._persist(uid, msg)
+      return true
     },
 
     _persist(uid, msg) {
@@ -224,7 +268,7 @@ export const useChatStore = defineStore('chat', {
         api
           .localSave(
             uid,
-            String(msg.id || ''),
+            String(msg.msgId || msg.id || ''),
             fromUid,
             msg.content || '',
             !!msg.self,
@@ -246,6 +290,7 @@ export const useChatStore = defineStore('chat', {
         if (this.messages[uid] && this.messages[uid].length) return
         this.messages[uid] = rows.map((r) => ({
           id: r.msg_id || nextId(),
+          msgId: r.msg_id || '',
           fromUid: r.from_uid,
           content: r.content,
           time: r.ts,
@@ -279,10 +324,28 @@ export const useChatStore = defineStore('chat', {
     // ack/nack 回执更新发送状态
     markStatus(key, status, msgId) {
       for (const uid of Object.keys(this.messages)) {
-        const m = this.messages[uid].find((x) => x.key === key)
-        if (m) {
+        const arr = this.messages[uid]
+        const idx = arr.findIndex((x) => x.key === key)
+        if (idx >= 0) {
+          const m = arr[idx]
           m.status = status
-          if (msgId) m.msgId = msgId
+          if (msgId) {
+            const realId = normalizeId(msgId)
+            const dupIndex = arr.findIndex(
+              (x, i) => i !== idx && (normalizeId(x.msgId) === realId || normalizeId(x.id) === realId)
+            )
+            const oldId = normalizeId(m.id)
+            m.msgId = realId
+            if (dupIndex >= 0) {
+              mergeMessage(m, arr[dupIndex])
+              arr.splice(dupIndex, 1)
+            }
+            if (oldId && oldId !== realId) {
+              api.localRekey(uid, oldId, realId, status).catch(() => {})
+            } else {
+              this._persist(uid, m)
+            }
+          }
           return
         }
       }
@@ -330,6 +393,7 @@ export const useChatStore = defineStore('chat', {
         const self = d.from_uid === this.selfUid
         mapped.push({
           id: id || nextId(),
+          msgId: id,
           fromUid: d.from_uid,
           content: d.content || '',
           time: parseTime(d.created_at),
@@ -370,15 +434,16 @@ export const useChatStore = defineStore('chat', {
         ? '新消息'
         : undefined
       this.ensureConversation(uid, placeholderName, !!groupId)
-      this._push(uid, {
+      const inserted = this._push(uid, {
         id: (payload && payload.msg_id) || nextId(),
+        msgId: (payload && payload.msg_id) || '',
         fromUid: from || uid,
         content,
         time,
         self,
         status: self ? 'sent' : 'recv',
       })
-      this._touch(uid, content, time, !self)
+      if (inserted) this._touch(uid, content, time, !self)
     },
 
     // 离线同步的消息：含 from_uid / to_uid / group_id，可正确归属。
@@ -396,15 +461,16 @@ export const useChatStore = defineStore('chat', {
       if (!peer) return
       const time = parseTime(m.created_at)
       this.ensureConversation(peer, undefined, isGroup)
-      this._push(peer, {
+      const inserted = this._push(peer, {
         id: m.msg_id || nextId(),
+        msgId: m.msg_id || '',
         fromUid: from,
         content: m.content || '',
         time,
         self,
         status: self ? 'sent' : 'recv',
       })
-      this._touch(peer, m.content || '', time, !self)
+      if (inserted) this._touch(peer, m.content || '', time, !self)
     },
 
 

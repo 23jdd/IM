@@ -189,9 +189,38 @@ func (s *LocalStore) SaveMessage(peer, msgId, fromUid, content string, self bool
 	if self {
 		selfInt = 1
 	}
+	if msgId != "" {
+		res, err := s.db.Exec(
+			`UPDATE messages SET from_uid = ?, content = ?, self = ?, status = ?, ts = ? WHERE peer = ? AND msg_id = ?`,
+			fromUid, content, selfInt, status, ts, peer, msgId,
+		)
+		if err != nil {
+			return err
+		}
+		if n, err := res.RowsAffected(); err == nil && n > 0 {
+			return nil
+		}
+	}
 	_, err := s.db.Exec(
 		`INSERT INTO messages (peer, msg_id, from_uid, content, self, status, ts) VALUES (?, ?, ?, ?, ?, ?, ?)`,
 		peer, msgId, fromUid, content, selfInt, status, ts,
+	)
+	return err
+}
+
+// RekeyMessage updates a locally cached message from a temporary id to the server msg_id.
+func (s *LocalStore) RekeyMessage(peer, oldMsgId, newMsgId, status string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.db == nil {
+		return errors.New("local store not initialized")
+	}
+	if peer == "" || oldMsgId == "" || newMsgId == "" || oldMsgId == newMsgId {
+		return nil
+	}
+	_, err := s.db.Exec(
+		`UPDATE messages SET msg_id = ?, status = COALESCE(NULLIF(?, ''), status) WHERE peer = ? AND msg_id = ?`,
+		newMsgId, status, peer, oldMsgId,
 	)
 	return err
 }
@@ -230,11 +259,18 @@ func (s *LocalStore) LoadMessages(peer string, limit int) ([]LocalMessage, error
 	defer rows.Close()
 
 	out := make([]LocalMessage, 0)
+	seen := map[string]bool{}
 	for rows.Next() {
 		var m LocalMessage
 		var selfInt int
 		if err := rows.Scan(&m.MsgId, &m.FromUid, &m.Content, &selfInt, &m.Status, &m.Ts); err != nil {
 			return nil, err
+		}
+		if m.MsgId != "" {
+			if seen[m.MsgId] {
+				continue
+			}
+			seen[m.MsgId] = true
 		}
 		m.Self = selfInt == 1
 		out = append(out, m)
@@ -265,11 +301,18 @@ func (s *LocalStore) SearchMessages(peer, keyword string, limit int) ([]LocalMes
 	defer rows.Close()
 
 	out := make([]LocalMessage, 0)
+	seen := map[string]bool{}
 	for rows.Next() {
 		var m LocalMessage
 		var selfInt int
 		if err := rows.Scan(&m.MsgId, &m.FromUid, &m.Content, &selfInt, &m.Status, &m.Ts); err != nil {
 			return nil, err
+		}
+		if m.MsgId != "" {
+			if seen[m.MsgId] {
+				continue
+			}
+			seen[m.MsgId] = true
 		}
 		m.Self = selfInt == 1
 		out = append(out, m)

@@ -25,6 +25,7 @@ import * as $models from "./models.js";
 export function ClearMessages(peer) {
     return $Call.ByID(3727948057, peer);
 }
+
 /**
  * ClearSession 登出时清除登录态。
  * @returns {$CancellablePromise<void>}
@@ -73,6 +74,18 @@ export function MarkRecalled(msgId) {
     return $Call.ByID(51041097, msgId);
 }
 
+
+/**
+ * RekeyMessage updates a locally cached message from a temporary id to the server msg_id.
+ * @param {string} peer
+ * @param {string} oldMsgId
+ * @param {string} newMsgId
+ * @param {string} status
+ * @returns {$CancellablePromise<void>}
+ */
+export function RekeyMessage(peer, oldMsgId, newMsgId, status) {
+    return $Call.ByID(548401227, peer, oldMsgId, newMsgId, status);
+}
 /**
  * SaveMessage 持久化一条消息。
  * @param {string} peer
@@ -100,7 +113,6 @@ export function SaveSession(token, uid, name, profile) {
     return $Call.ByID(470146979, token, uid, name, profile);
 }
 
-
 /**
  * SearchMessages searches local messages in one conversation by keyword, newest first.
  * @param {string} peer
@@ -113,6 +125,7 @@ export function SearchMessages(peer, keyword, limit) {
         return $$createType1($result);
     }));
 }
+
 // Private type creation functions
 const $$createType0 = $models.LocalMessage.createFrom;
 const $$createType1 = $Create.Array($$createType0);
