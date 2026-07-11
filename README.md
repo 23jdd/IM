@@ -1,5 +1,17 @@
 # ChatIM
 
+![Go](https://img.shields.io/badge/Go-1.25%2B-00ADD8?logo=go&logoColor=white)
+![Gin](https://img.shields.io/badge/Gin-1.12-00ADD8?logo=go&logoColor=white)
+![Wails](https://img.shields.io/badge/Wails-v3_alpha-DF0000?logo=wails&logoColor=white)
+![Vue](https://img.shields.io/badge/Vue-3-42B883?logo=vuedotjs&logoColor=white)
+![Element Plus](https://img.shields.io/badge/Element%20Plus-2.x-409EFF?logo=element&logoColor=white)
+![Vite](https://img.shields.io/badge/Vite-8-646CFF?logo=vite&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-local-003B57?logo=sqlite&logoColor=white)
+![WebRTC](https://img.shields.io/badge/WebRTC-video-333333?logo=webrtc&logoColor=white)
+![MySQL](https://img.shields.io/badge/MySQL-8-4479A1?logo=mysql&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-7-47A248?logo=mongodb&logoColor=white)
+![Redis](https://img.shields.io/badge/Redis-cache-DC382D?logo=redis&logoColor=white)
+![RabbitMQ](https://img.shields.io/badge/RabbitMQ-queue-FF6600?logo=rabbitmq&logoColor=white)
 ChatIM 是一个 Go + Wails3 + Vue3 的即时通讯项目。
 
 后端提供 HTTP API、自研 TCP 长连接、网关代理和消息路由；桌面客户端使用 Wails3 + Vue3 + Element Plus，并用本地 SQLite 保存登录态和消息缓存。
