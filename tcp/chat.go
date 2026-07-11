@@ -26,29 +26,6 @@ type TextChatPayload struct {
 	Mentions []string `json:"mentions"`
 }
 
-// RealtimeSignalRequest is the JSON control frame used for lightweight realtime events.
-type RealtimeSignalRequest struct {
-	Action     string          `json:"action"`
-	ToUid      string          `json:"to_uid"`
-	GroupId    string          `json:"group_id"`
-	UpTo       int64           `json:"up_to"`
-	SignalType string          `json:"signal_type"`
-	SDP        string          `json:"sdp"`
-	Candidate  json.RawMessage `json:"candidate"`
-	CallID     string          `json:"call_id"`
-}
-
-// VideoSignalPayload is forwarded to the callee through the existing Json channel.
-type VideoSignalPayload struct {
-	Event      string `json:"event"`
-	FromUid    string `json:"from_uid"`
-	ToUid      string `json:"to_uid"`
-	SignalType string `json:"signal_type"`
-	CallID     string `json:"call_id"`
-	SDP        string `json:"sdp,omitempty"`
-	Candidate  any    `json:"candidate,omitempty"`
-}
-
 // RealtimeTextPayload 是服务端路由给接收方的实时文本帧体，携带发送者信息，
 // 使接收端能正确归属消息（修复"实时帧丢失 from_uid"问题）。群聊时带 group_id。
 type RealtimeTextPayload struct {
@@ -227,8 +204,8 @@ func OfflineSyncHandler(m *Message.Message, c *Client) {
 			case "read":
 				handleRead(c, req.ToUid, req.GroupId, req.UpTo)
 				return
-			case "video_signal":
-				handleVideoSignal(c, req.ToUid, req.SignalType, req.SDP, req.Candidate, req.CallID)
+			case realtimeActionVideoSignal:
+				handleVideoSignal(c, req)
 				return
 			}
 		}
@@ -303,32 +280,6 @@ func handleRead(c *Client, toUid, groupId string, upTo int64) {
 	}
 	payload, _ := json.Marshal(map[string]any{"event": "read", "from_uid": c.UID(), "up_to": upTo})
 	_ = c.server.RouteTo(toUid, Message.NewMessage(Message.Json, 0, payload))
-}
-
-// handleVideoSignal forwards WebRTC signaling between single-chat peers.
-// Media flows peer-to-peer; the IM server only relays offer/answer/ICE metadata.
-func handleVideoSignal(c *Client, toUid, signalType, sdp string, candidate json.RawMessage, callID string) {
-	if toUid == "" || signalType == "" {
-		return
-	}
-	payload := VideoSignalPayload{
-		Event:      "video_signal",
-		FromUid:    c.UID(),
-		ToUid:      toUid,
-		SignalType: signalType,
-		CallID:     callID,
-	}
-	if sdp != "" {
-		payload.SDP = sdp
-	}
-	if len(candidate) > 0 && string(candidate) != "null" {
-		var v any
-		if err := json.Unmarshal(candidate, &v); err == nil {
-			payload.Candidate = v
-		}
-	}
-	data, _ := json.Marshal(payload)
-	_ = c.server.RouteTo(toUid, Message.NewMessage(Message.Json, 0, data))
 }
 
 // AckHandler 处理客户端对离线消息的确认：收到 ACK(key) 后才将对应消息标记已读。

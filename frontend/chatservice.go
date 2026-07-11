@@ -28,16 +28,6 @@ type ChatService struct {
 	connected   bool
 }
 
-// VideoSignalRequest is the bridge payload for WebRTC signaling frames.
-type VideoSignalRequest struct {
-	Action     string `json:"action"`
-	ToUid      string `json:"to_uid"`
-	SignalType string `json:"signal_type"`
-	CallID     string `json:"call_id"`
-	SDP        string `json:"sdp,omitempty"`
-	Candidate  any    `json:"candidate,omitempty"`
-}
-
 // NewChatService 创建聊天桥接服务实例。
 func NewChatService() *ChatService {
 	return &ChatService{}
@@ -202,7 +192,7 @@ func (s *ChatService) SendVideoSignal(toUid, signalType, sdp, candidateJSON, cal
 		return nil
 	}
 	payload := VideoSignalRequest{
-		Action:     "video_signal",
+		Action:     videoSignalAction,
 		ToUid:      toUid,
 		SignalType: signalType,
 		CallID:     callID,

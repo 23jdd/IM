@@ -2,7 +2,7 @@
 
 一个即时通讯系统：**Go 后端**（HTTP + 自研 TCP 长连接 + 网关） + **Wails3 桌面客户端**（Vue3 + Element Plus），客户端与后端完全分离。
 
-支持单聊 / 群聊、好友与群组管理、朋友圈、图片 / 文件 / 表情、消息撤回、历史翻页、黑名单、正在输入提示、已读回执、**同账号多端在线与多端同步**、离线可靠投递、跨实例消息路由，以及客户端本地 SQLite 持久化。
+支持单聊 / 群聊、好友与群组管理、朋友圈、图片 / 文件 / 表情、消息撤回、历史翻页、黑名单、正在输入提示、已读回执、**一对一 WebRTC 视频通话**、**同账号多端在线与多端同步**、离线可靠投递、跨实例消息路由，以及客户端本地 SQLite 持久化。
 
 ---
 
@@ -24,6 +24,7 @@
 - 实时收发，消息携带发送者信息，离线进入离线表、上线拉取
 - 发送状态（发送中 / 已送达）、**已读回执（已读）**
 - **消息撤回**：2 分钟内可撤回，双方与本人多端实时变为"已撤回"
+- **一对一视频通话**：WebRTC 媒体点对点传输，TCP Json 通道只转发 offer / answer / ICE candidate / 挂断等信令
 
 **群聊**
 - 创建群、邀请好友入群
@@ -49,7 +50,7 @@
 
 **实时通知**（复用 TCP 通道，`event` 区分）
 - 好友申请 / 好友接受 / 群邀请 / 入群审批结果 / 被 @ 提醒
-- 消息撤回 / 解散 / 被踢 / 群主变更 / 群公告 / 被禁言 / 被拉黑 / 正在输入 / 已读回执
+- 消息撤回 / 解散 / 被踢 / 群主变更 / 群公告 / 被禁言 / 被拉黑 / 正在输入 / 已读回执 / 视频通话信令
 
 **可靠性与分布式**
 - 离线消息**逐条 ACK 后才标记已读**（at-least-once）
@@ -224,6 +225,28 @@ sequenceDiagram
     Note over A: 单聊「已读」；群聊本地累计「N 人已读」
 ```
 
+**⑦ 一对一视频通话信令（WebRTC）**
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant A as 主叫客户端
+    participant T as TCP Server
+    participant B as 被叫客户端
+
+    A->>T: Json { action:video_signal, signal_type:offer, to_uid, sdp, call_id }
+    T->>B: Json { event:video_signal, signal_type:offer, from_uid, sdp, call_id }
+    B->>T: Json { action:video_signal, signal_type:answer, to_uid, sdp, call_id }
+    T->>A: Json { event:video_signal, signal_type:answer, from_uid, sdp, call_id }
+    loop ICE candidate
+        A->>T: Json { action:video_signal, signal_type:candidate, candidate }
+        T->>B: Json { event:video_signal, signal_type:candidate, candidate }
+        B->>T: Json { action:video_signal, signal_type:candidate, candidate }
+        T->>A: Json { event:video_signal, signal_type:candidate, candidate }
+    end
+    Note over A,B: 音视频媒体由 WebRTC 点对点传输，服务端只中转信令
+```
+
 ---
 
 ## 🧰 技术栈
@@ -233,7 +256,7 @@ sequenceDiagram
 | 客户端 | Wails3 (alpha)、Vue 3、Element Plus、Vite、Pinia、Vue Router |
 | 客户端本地存储 | `modernc.org/sqlite`（纯 Go，无 CGO） |
 | 后端 Web | Gin |
-| 实时通信 | 自研 TCP 二进制协议、ants 协程池、分级内存池 |
+| 实时通信 | 自研 TCP 二进制协议、WebRTC（客户端 P2P 媒体）、ants 协程池、分级内存池 |
 | 鉴权 | JWT（HS256，密钥可配置） |
 | 关系数据库 | MySQL（go-zero `sqlx`） |
 | 文档/二进制存储 | MongoDB（消息归档 / 历史翻页、头像 / 图片 / 文件、朋友圈） |
@@ -256,6 +279,7 @@ IM/                          # 后端（Go module: IM）
 │   ├── client.go            # 读写协程 / 心跳 / Handler 链 / 离线 ACK / 引用计数下线
 │   ├── Handle.go router.go  # Verify(addClient) / Echo / 路由分发
 │   ├── chat.go              # 单聊·群扇出·@提醒·离线同步·禁言/黑名单拦截·typing/read·多端同步
+│   ├── video_signal.go      # WebRTC 信令请求/载荷构造与 offer/answer/ICE 转发
 │   ├── presence.go          # Presence/Forwarder 抽象 + 内存实现
 │   ├── pool.go context.go   # 内存池 / 连接级 KV
 │   └── Message/             # 二进制协议编解码
@@ -271,10 +295,11 @@ IM/                          # 后端（Go module: IM）
     ├── main.go              # Wails 应用入口，注册 3 个 Service
     ├── authservice.go       # HTTP 桥接（注册/登录/好友/群/消息/朋友圈/文件…）
     ├── chatservice.go       # TCP 桥接（收发/事件推送/typing/read/保存文件对话框）
+    ├── videosignal.go       # WebRTC 信令桥接请求结构与 action 常量
     ├── localstore.go        # 本地 SQLite（session + 消息历史 + 撤回标记）
     └── frontend/            # Vue 前端
         ├── src/views/       # Login / Main
-        ├── src/components/  # 会话列表 / 聊天面板 / 通讯录 / 朋友圈 / 信息卡片 ...
+        ├── src/components/  # 会话列表 / 聊天面板 / 视频通话 / 通讯录 / 朋友圈 / 信息卡片 ...
         ├── src/store/       # Pinia（user / chat）
         ├── src/api/         # 统一封装 Wails 绑定 + 事件
         └── public/stickers/ # 表情包资源（index.json + 图片）
@@ -298,13 +323,13 @@ IM/                          # 后端（Go module: IM）
 | ACK / Nack | 0 / 1 | 确认 / 拒绝（离线消息逐条 ACK 也走此通道） |
 | Auth | 2 | JWT 认证 |
 | HeartBeat | 3 | 心跳保活（写超时探活、续期在线状态） |
-| Json | 4 | **多路复用**：客户端 → 触发离线同步 / 实时信号（`action:typing`、`action:read`）；服务端 → 系统通知与事件（`event` 区分，如 `recall` / `group_*` / `typing` / `read` / `group_read` / `blocked` …） |
+| Json | 4 | **多路复用**：客户端 → 触发离线同步 / 实时信号（`action:typing`、`action:read`、`action:video_signal`）；服务端 → 系统通知与事件（`event` 区分，如 `recall` / `group_*` / `typing` / `read` / `group_read` / `video_signal` / `blocked` …） |
 | Text | 5 | 文本（图片/文件/表情复用，body 为带标记的 JSON；服务端下发携带 `from_uid`/`to_uid`/`group_id` 以支持归属与多端同步） |
 | Blob | 6 | 二进制（离线消息逐条下发） |
 
 读取有最大包体校验（`MaxBodyLen`）防止 OOM。
 
-> **Json 帧分流**：服务端 `Json` 处理器先看 body 的 `action` 字段——`typing` / `read` 走即发即弃的实时信号转发（不落库、不归档），否则按"触发离线同步"处理。
+> **Json 帧分流**：服务端 `Json` 处理器先看 body 的 `action` 字段——`typing` / `read` / `video_signal` 走即发即弃的实时信号转发（不落库、不归档），否则按"触发离线同步"处理。
 
 ---
 
@@ -345,7 +370,7 @@ MessageHandler():
 | Handler | 职责 |
 |---|---|
 | **Verify** | 只处理 `Auth`：`ParseToken` → `addClient(uid)`（多端在线） → `presence.SetOnline` → ACK；置 `finished` |
-| **Router** | 跳过未认证；按 `type` 查 `bizRoutes`，分发到 `ChatMessageHandler`（单聊 / 群扇出，含禁言/黑名单拦截、多端同步）/ `OfflineSyncHandler`（离线同步 + typing/read 分流）/ `AckHandler` |
+| **Router** | 跳过未认证；按 `type` 查 `bizRoutes`，分发到 `ChatMessageHandler`（单聊 / 群扇出，含禁言/黑名单拦截、多端同步）/ `OfflineSyncHandler`（离线同步 + typing/read/video_signal 分流）/ `AckHandler` |
 | **Echo** | 兜底回显未被消费的消息 |
 
 ### 心跳保活与优雅退出
@@ -476,7 +501,7 @@ go test ./service/ ./tcp/ ./gateway/ ./Tests/ -count=1
 go test ./service/ ./tcp/ ./gateway/ -race -count=1
 ```
 
-覆盖：连接引擎并发安全、协议编解码与长度防护、心跳/优雅关闭、离线 ACK 投递、**同账号多连接投递与多端自发同步**、登录、好友申请/接受/删除/**备注/黑名单与发送拦截**、群创建/邀请/审批、**退群/解散/踢人/转让/禁言/公告**、@提醒扇出、**消息撤回**、**历史翻页**、**正在输入/已读回执转发**、跨实例路由、朋友圈、头像/查用户、网关半关闭等。
+覆盖：连接引擎并发安全、协议编解码与长度防护、心跳/优雅关闭、离线 ACK 投递、**同账号多连接投递与多端自发同步**、登录、好友申请/接受/删除/**备注/黑名单与发送拦截**、群创建/邀请/审批、**退群/解散/踢人/转让/禁言/公告**、@提醒扇出、**消息撤回**、**历史翻页**、**正在输入/已读回执转发**、**WebRTC 视频信令构造与转发**、跨实例路由、朋友圈、头像/查用户、网关半关闭等。
 
 > `Tests/TestTieredPoolPutAndReuse` 偶发失败属 `sync.Pool` 在 `-race` 下被 GC 清空的非确定性问题，与业务无关。
 
@@ -487,12 +512,13 @@ go test ./service/ ./tcp/ ./gateway/ -race -count=1
 - **客户端/后端分离**：WebView 无法直接开原始 TCP，故客户端 Go 侧实现 TCP 桥接，向前端暴露方法并以事件推送消息；HTTP 也经 Go 侧转发以规避跨域。
 - **可靠投递**：离线消息逐条 ACK 后才标记已读，避免"发完即标记"导致丢消息。
 - **多端在线/同步**：同一 uid 多连接共存，消息扇出到全部在线端；自己发出的消息实时同步到本端其他设备，离线设备的历史由翻页补齐。
-- **实时信号即发即弃**：正在输入、已读回执复用通知通道（`Json` + `RouteTo`），仅在线投递、零持久化；输入提示 5s 过期、发送端 2.5s 节流。
+- **实时信号即发即弃**：正在输入、已读回执与 WebRTC 信令复用通知通道（`Json` + `RouteTo`），仅在线投递、零持久化；输入提示 5s 过期、发送端 2.5s 节流。
 - **撤回一致性**：撤回同时更新 MySQL 与（best-effort）Mongo，并写入客户端本地 SQLite，重启后仍显示"已撤回"。
 - **水平扩展**：通过 Redis 在线表 + Pub/Sub 转发实现跨实例消息路由；网关负载均衡到多后端。
 - **限制**：
   - 跨实例多端：在线表为 `online:<uid> → 单实例`，同账号同时连不同实例时只向其一转发（如需完全支持可升级为 `GetInstances` + Redis SET，向所有相关实例转发）。
   - 离线撤回/已读/输入为 best-effort，离线期间不回溯；群"N 人已读"为客户端本地累计，不入库。
+  - WebRTC 当前只内置公共 STUN，媒体走客户端点对点；复杂 NAT / 公网生产环境通常需要补 TURN 服务。
   - 网关的服务发现为静态 `backend_addrs`（非 etcd）；离线消息默认 `LIMIT 200`、历史每页默认 30（上限 100）；表情/文件大小有前端限制。
 
 ---
@@ -523,4 +549,4 @@ GET  /api/group/list | members | requests | info
 POST /api/moment/publish | like | comment | delete   GET /api/moment/timeline
 ```
 
-实时消息、离线同步、正在输入 / 已读回执、好友/群/@/撤回/拉黑等通知均通过 TCP(:9000) 长连接。
+实时消息、离线同步、正在输入 / 已读回执、WebRTC 视频信令、好友/群/@/撤回/拉黑等通知均通过 TCP(:9000) 长连接。
